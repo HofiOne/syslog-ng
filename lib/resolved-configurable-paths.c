@@ -34,4 +34,5 @@ resolved_configurable_paths_init(ResolvedConfigurablePaths *self)
   resolved_configurable_paths.persist_file = get_installation_path_for(PATH_PERSIST_CONFIG);
   resolved_configurable_paths.ctlfilename = get_installation_path_for(PATH_CONTROL_SOCKET);
   resolved_configurable_paths.initial_module_path = get_installation_path_for(SYSLOG_NG_MODULE_PATH);
+  resolved_configurable_paths.initial_include_path = get_installation_path_for(SYSLOG_NG_PATH_CONFIG_INCLUDEDIR);
 }

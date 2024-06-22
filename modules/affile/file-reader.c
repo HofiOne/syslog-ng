@@ -136,7 +136,7 @@ _is_fd_pollable(gint fd)
   pollable = (iv_fd_register_try(&check_fd) == 0);
   if (pollable)
     iv_fd_unregister(&check_fd);
-  return pollable;
+  return 1;//pollable;
 }
 
 static PollEvents *

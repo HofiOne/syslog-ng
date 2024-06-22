@@ -34,6 +34,7 @@ typedef struct _ResolvedConfigurablePaths
   const gchar *persist_file;
   const gchar *ctlfilename;
   const gchar *initial_module_path;
+  const gchar *initial_include_path;
 } ResolvedConfigurablePaths;
 
 extern ResolvedConfigurablePaths resolved_configurable_paths;

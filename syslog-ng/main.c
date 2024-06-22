@@ -71,6 +71,7 @@ extern int cfg_parser_debug;
 static GOptionEntry syslogng_options[] =
 {
   { "version",           'V',         0, G_OPTION_ARG_NONE, &display_version, "Display version number (" SYSLOG_NG_PACKAGE_NAME " " SYSLOG_NG_COMBINED_VERSION ")", NULL },
+  { "include-path",        0,         0, G_OPTION_ARG_STRING, &resolved_configurable_paths.initial_include_path, "Set the list of colon separated directories to search for configuration includes, default=" SYSLOG_NG_PATH_CONFIG_INCLUDEDIR, "<path>" },
   { "module-path",         0,         0, G_OPTION_ARG_STRING, &resolved_configurable_paths.initial_module_path, "Set the list of colon separated directories to search for modules, default=" SYSLOG_NG_MODULE_PATH, "<path>" },
   { "module-registry",     0,         0, G_OPTION_ARG_NONE, &display_module_registry, "Display module information", NULL },
   { "no-module-discovery", 0,         0, G_OPTION_ARG_NONE, &main_loop_options.disable_module_discovery, "Disable module auto-discovery, all modules need to be loaded explicitly by the configuration", NULL },
@@ -171,7 +172,7 @@ version(void)
 
   printf("Module-Directory: %s\n", get_installation_path_for(SYSLOG_NG_PATH_MODULEDIR));
   printf("Module-Path: %s\n", resolved_configurable_paths.initial_module_path);
-  printf("Include-Path: %s\n", get_installation_path_for(SYSLOG_NG_PATH_CONFIG_INCLUDEDIR));
+  printf("Include-Path: %s\n", resolved_configurable_paths.initial_include_path);
   printf("Available-Modules: ");
   plugin_list_modules(stdout, FALSE);
 

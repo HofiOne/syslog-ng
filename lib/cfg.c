@@ -532,7 +532,7 @@ cfg_set_global_paths(GlobalConfig *self)
 
   cfg_args_set(self->globals, "syslog-ng-root", get_installation_path_for(SYSLOG_NG_PATH_PREFIX));
   cfg_args_set(self->globals, "syslog-ng-data", get_installation_path_for(SYSLOG_NG_PATH_DATADIR));
-  cfg_args_set(self->globals, "syslog-ng-include", get_installation_path_for(SYSLOG_NG_PATH_CONFIG_INCLUDEDIR));
+  cfg_args_set(self->globals, "syslog-ng-include", resolved_configurable_paths.initial_include_path);
   cfg_args_set(self->globals, "syslog-ng-sysconfdir", get_installation_path_for(SYSLOG_NG_PATH_SYSCONFDIR));
   cfg_args_set(self->globals, "scl-root", get_installation_path_for(SYSLOG_NG_PATH_SCLDIR));
   cfg_args_set(self->globals, "module-path", resolved_configurable_paths.initial_module_path);
@@ -540,7 +540,7 @@ cfg_set_global_paths(GlobalConfig *self)
 
   include_path = g_strdup_printf("%s:%s",
                                  get_installation_path_for(SYSLOG_NG_PATH_SYSCONFDIR),
-                                 get_installation_path_for(SYSLOG_NG_PATH_CONFIG_INCLUDEDIR));
+                                 resolved_configurable_paths.initial_include_path);
   cfg_args_set(self->globals, "include-path", include_path);
   g_free(include_path);
 }
