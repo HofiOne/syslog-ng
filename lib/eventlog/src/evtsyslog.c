@@ -61,23 +61,23 @@ evt_closelog(void)
 }
 
 void
-evt_vsyslog(int pri, const char *format, va_list ap)
+evt_vsyslog(int pri, long thread_id, const char *format, va_list ap)
 {
   EVTREC *e;
   char msgbuf[1024];
 
   vsnprintf(msgbuf, sizeof(msgbuf), format, ap);
-  e = evt_rec_init(syslog_context, pri, msgbuf);
+  e = evt_rec_init(syslog_context, pri, thread_id, msgbuf);
   evt_log(e);
 }
 
 void
-evt_syslog(int pri, const char *format, ...)
+evt_syslog(int pri, long thread_id, const char *format, ...)
 {
   va_list ap;
 
   va_start(ap, format);
-  evt_vsyslog(pri, format, ap);
+  evt_vsyslog(pri, thread_id, format, ap);
   va_end(ap);
 }
 

@@ -122,7 +122,7 @@ void evt_ctx_free(EVTCONTEXT *ctx);
 int evt_ctx_tag_hook_add(EVTCONTEXT *ctx, int (*func)(EVTREC *e, void *user_ptr), void *user_ptr);
 
 /* event record manipulation */
-EVTREC *evt_rec_init(EVTCONTEXT *ctx, int syslog_pri, const char *desc);
+EVTREC *evt_rec_init(EVTCONTEXT *ctx, int syslog_pri, long thread_id, const char *desc);
 void evt_rec_add_tag(EVTREC *e, EVTTAG *tag);
 void evt_rec_add_tagsv(EVTREC *e, va_list tags);
 void evt_rec_add_tags(EVTREC *e, EVTTAG *first, ...);
@@ -176,8 +176,8 @@ int evt_log(EVTREC *e);
 /* syslog wrapper */
 void evt_openlog(const char *ident, int option, int facility);
 void evt_closelog(void);
-void evt_vsyslog(int pri, const char *format, va_list ap) G_GNUC_PRINTF(2, 0);
-void evt_syslog(int pri, const char *format, ...) G_GNUC_PRINTF(2, 3);
+void evt_vsyslog(int pri, long thread_id, const char *format, va_list ap) G_GNUC_PRINTF(3, 0);
+void evt_syslog(int pri, long thread_id, const char *format, ...) G_GNUC_PRINTF(3, 4);
 
 #ifdef EVENTLOG_SYSLOG_MACROS
 

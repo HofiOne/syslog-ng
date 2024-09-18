@@ -100,7 +100,7 @@ evt_rec_call_hooks(EVTREC *e)
 }
 
 EVTREC *
-evt_rec_init(EVTCONTEXT *ctx, int syslog_pri, const char *desc)
+evt_rec_init(EVTCONTEXT *ctx, int syslog_pri, long thread_id, const char *desc)
 {
   EVTREC *e;
 
@@ -113,6 +113,7 @@ evt_rec_init(EVTCONTEXT *ctx, int syslog_pri, const char *desc)
       e->ev_last_pair = NULL;
       e->ev_ref = 1;
       e->ev_syslog_pri = syslog_pri;
+      e->ev_thread_id = thread_id;
       if (!evt_rec_call_hooks(e))
         {
           free(e);

@@ -97,6 +97,8 @@ struct __evtrec
 {
   int ev_ref;
   int ev_syslog_pri;
+  /* This should be ThreadId, but that adds further dependencies */
+  long ev_thread_id;
   char *ev_desc;
   EVTTAG *ev_pairs;
   EVTTAG *ev_last_pair;
