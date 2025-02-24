@@ -173,10 +173,12 @@ setup_help_context(const gchar *cmdname, CommandDescriptor *active_mode)
   if (!active_mode)
     return NULL;
 
-  GOptionContext *ctx = g_option_context_new(cmdname);
+  GOptionContext *ctx = g_option_context_new(active_mode->mode);
   g_option_context_set_summary(ctx, active_mode->description);
   g_option_context_add_main_entries(ctx, active_mode->options, NULL);
   g_option_context_add_main_entries(ctx, slng_options, NULL);
+  // Further detailed description can go to the end of the list
+  //g_option_context_set_description(ctx, active_mode->detailed_description);
 
   return ctx;
 }
