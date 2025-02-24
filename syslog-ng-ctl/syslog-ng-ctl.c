@@ -136,11 +136,12 @@ print_usage(const gchar *bin_name, CommandDescriptor *descriptors)
 {
   gint mode;
 
-  fprintf(stderr, "Syntax: %s <command> [options]\nPossible commands are:\n", bin_name);
+  fprintf(stderr, "Syntax: %s <command> [options]\n\nPossible commands are:\n", bin_name);
   for (mode = 0; descriptors[mode].mode; mode++)
     {
       fprintf(stderr, "    %-20s %s\n", descriptors[mode].mode, descriptors[mode].description);
     }
+  fprintf(stderr, "\nFor detailed help of a given command use:\n    %s <command> --help|-h\nor\n    %s --help|-h <command>\n", bin_name, bin_name);
 }
 
 static CommandDescriptor *
