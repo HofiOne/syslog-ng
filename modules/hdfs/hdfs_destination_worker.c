@@ -115,7 +115,20 @@ _connect(LogThreadedDestWorker *s)
   msg_debug(LOG_PREFIX "Connecing to HDFS...");
 
   //self->hdfs = hdfsConnect("192.168.1.111", 9000);
-  self->hdfs = hdfsConnect("hdfs://10.12.129.40", 8020);
+  //self->hdfs = hdfsConnect("hdfs://10.12.129.40", 8020);
+  self->hdfs = hdfsConnect("hdfs://hdp2.syslog-ng.balabit", 8020);
+
+  //self->hdfs = hdfsConnect("hdfs://hadoop-host-1.ssb.balabit", 8020);
+  //self->hdfs = hdfsConnectAsUser("hdfs://hadoop-host-1.ssb.balabit", 8020, "admin");
+  //
+  // struct hdfsBuilder *bld = hdfsNewBuilder();
+  // hdfsBuilderSetNameNode(bld, "hdfs://hadoop-host-2.ssb.balabit");
+  // hdfsBuilderSetNameNodePort(bld, 8020);
+  // //hdfsBuilderSetUserName(bld, "admin");
+  // self->hdfs = hdfsBuilderConnect(bld);
+  // hdfsFreeBuilder(bld);
+
+
   if (self->hdfs == NULL)
     {
       msg_error(LOG_PREFIX "Could not connect to HDFS",
@@ -194,6 +207,8 @@ hdfs_destination_dw_new(LogThreadedDestDriver *o, gint worker_index)
   HDFSDestinationWorker *self = g_new0(HDFSDestinationWorker, 1);
 
   log_threaded_dest_worker_init_instance(&self->super, o, worker_index);
+  self->super.batch_size = 1;
+
   self->super.init = _dw_init;
   self->super.deinit = _dw_deinit;
   self->super.insert = _dw_insert;
