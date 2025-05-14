@@ -1,0 +1,18 @@
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://hadoop-host-1.ssb.balabit:8020</value>
+    </property>
+    <property>
+        <name>hadoop.security.authentication</name>
+        <value>kerberos</value>
+    </property>
+    <property>
+        <name>dfs.namenode.kerberos.principal</name>
+        <value>nn/hadoop-host-1.ssb.balabit@SSB.BALABIT</value>
+    </property>    
+    <property>
+        <name>hadoop.rpc.protection</name>
+        <value>privacy</value>
+    </property>
+</configuration>
