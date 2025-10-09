@@ -168,6 +168,13 @@ afsocket_sc_init(LogPipe *s)
         }
 
       self->reader = log_reader_new(s->cfg);
+      /* FIXME: The reader should take over ownnership of its own options structure
+       * if connections_kept_alive_across_reloads is true, but currently it is not possible, as it is not
+       * a dynamically allocated options structure, and member of the AFSocketSourceDriver.
+       * Anything that uses the options set up here, the reader, the socket, the proto, etc. either should copy the
+       * options (that never happens), or the reader should keep the options structure alive as long as these are alive,
+       * that is not the case either.
+       */
       log_pipe_set_options(&self->reader->super.super, &self->super.options);
       log_reader_open(self->reader, proto, poll_fd_events_new(self->sock));
       log_reader_set_peer_addr(self->reader, self->peer_addr);
