@@ -80,17 +80,20 @@ slng_attach(int argc, char *argv[], const gchar *mode, GOptionContext *ctx)
 {
   GString *command = g_string_new("ATTACH");
   const gchar *attach_mode = mode ? : "stdio";
+  gint def_fds_to_steal = (1 << STDOUT_FILENO) | (1 << STDERR_FILENO);
 
   if (g_str_equal(attach_mode, "stdio"))
     g_string_append(command, " STDIO");
   else if (g_str_equal(attach_mode, "logs"))
     g_string_append(command, " LOGS");
   else if (g_str_equal(attach_mode, "debugger"))
-    g_string_append(command, " DEBUGGER");
+    {
+      g_string_append(command, " DEBUGGER");
+      def_fds_to_steal = (1 << STDIN_FILENO);
+    }
 
   g_string_append_printf(command, " %d", attach_options_seconds > 0 ? attach_options_seconds : -1);
-  g_string_append_printf(command, " %d",
-                         attach_options_fds_to_steal > 0 ? attach_options_fds_to_steal : (1 << STDOUT_FILENO) | (1 << STDERR_FILENO));
+  g_string_append_printf(command, " %d", attach_options_fds_to_steal > 0 ? attach_options_fds_to_steal : def_fds_to_steal);
   if (attach_options_log_level)
     g_string_append_printf(command, " %s", attach_options_log_level);
 
