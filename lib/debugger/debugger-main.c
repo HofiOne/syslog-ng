@@ -83,11 +83,24 @@ _detach_debugger(gpointer user_data)
   return NULL;
 }
 
+static gpointer
+_interrupt_debugger(gpointer user_data)
+{
+  debugger_interrupt_requested(current_debugger);
+  return NULL;
+}
+
 void
 debugger_start(MainLoop *main_loop, GlobalConfig *cfg)
 {
   current_debugger = debugger_new(main_loop, cfg);
   main_loop_call(_attach_debugger, current_debugger, FALSE);
+}
+
+void
+debugger_interrupt(void)
+{
+  main_loop_call(_interrupt_debugger, NULL, FALSE);
 }
 
 void

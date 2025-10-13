@@ -39,6 +39,7 @@ void debugger_exit(Debugger *self);
 void debugger_start_console(Debugger *self);
 gboolean debugger_perform_tracing(Debugger *self, LogPipe *pipe, LogMessage *msg);
 gboolean debugger_stop_at_breakpoint(Debugger *self, LogPipe *pipe, LogMessage *msg);
+void debugger_interrupt_requested(Debugger *self);
 
 Debugger *debugger_new(MainLoop *main_loop, GlobalConfig *cfg);
 void debugger_free(Debugger *self);

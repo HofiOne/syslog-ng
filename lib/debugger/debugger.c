@@ -461,6 +461,12 @@ debugger_stop_at_breakpoint(Debugger *self, LogPipe *pipe_, LogMessage *msg)
   return !breakpoint_site.drop;
 }
 
+void
+debugger_interrupt_requested(Debugger *self)
+{
+  tracer_stop_on_interrupt(self->tracer);
+}
+
 gboolean
 debugger_perform_tracing(Debugger *self, LogPipe *pipe_, LogMessage *msg)
 {

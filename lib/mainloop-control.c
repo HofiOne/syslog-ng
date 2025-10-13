@@ -127,6 +127,7 @@ typedef struct _AttachCommandArgs
   gint n_seconds;
   gboolean log_stderr;
   gint log_level;
+  gboolean interrupt_debugger;
 } AttachCommandArgs;
 
 static gboolean
@@ -161,10 +162,17 @@ _parse_attach_command_args(GString *command, AttachCommandArgs *args, GString *r
   else if (g_str_equal(cmds[1], "DEBUGGER"))
     {
       args->start_debugger = TRUE;
+
+      if (cmds[2])
+        if (g_str_equal(cmds[2], "INTR"))
+          {
+            args->interrupt_debugger = TRUE;
+            goto exit_success;
+          }
     }
   else
     {
-      g_string_assign(result, "FAIL This version of syslog-ng only supports attaching to STDIO or LOGS");
+      g_string_assign(result, "FAIL This version of syslog-ng only supports attaching to STDIO, DEBUGGER, or LOGS");
       goto exit;
     }
 
@@ -178,8 +186,9 @@ _parse_attach_command_args(GString *command, AttachCommandArgs *args, GString *r
       g_string_assign(result, "FAIL Invalid log level");
       goto exit;
     }
-  success = TRUE;
 
+exit_success:
+  success = TRUE;
 exit:
   g_strfreev(cmds);
   return success;
@@ -205,11 +214,18 @@ control_connection_attach(ControlConnection *cc, GString *command, gpointer user
     .fds_to_steal = (1 << STDOUT_FILENO) | (1 << STDERR_FILENO),
     .n_seconds = -1,
     .log_stderr = old_values.log_stderr,
-    .log_level = old_values.log_level
+    .log_level = old_values.log_level,
+    .interrupt_debugger = FALSE
   };
 
   if (FALSE == _parse_attach_command_args(command, &cmd_args, result))
     goto exit;
+
+  if (cmd_args.interrupt_debugger)
+    {
+      debugger_interrupt();
+      goto exit;
+    }
 
   gint fds[3];
   gsize num_fds = G_N_ELEMENTS(fds);

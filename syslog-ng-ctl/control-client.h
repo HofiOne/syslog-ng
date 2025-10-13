@@ -34,6 +34,7 @@ ControlClient *control_client_new(const gchar *path);
 gboolean control_client_connect(ControlClient *self);
 gint control_client_send_command(ControlClient *self, const gchar *cmd, gboolean attach);
 gint control_client_read_reply(ControlClient *self, CommandResponseHandlerFunc cb, gpointer user_data);
+void control_client_interrupt_requested(ControlClient *self);
 void control_client_free(ControlClient *self);
 
 #endif

@@ -26,6 +26,11 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <time.h>
+
+#define INTERRUPT_CHECK_INTERVAL 2
 
 static ControlClient *control_client;
 
@@ -81,13 +86,43 @@ slng_run_command(const gchar *command, CommandResponseHandlerFunc cb, gpointer u
   return control_client_read_reply(control_client, cb, user_data);
 }
 
+static void
+_interrupt(int signo)
+{
+  static sig_atomic_t last_interrupt_time = 0;
+  time_t now = time(NULL);
+
+  if (last_interrupt_time != 0 && (now - last_interrupt_time) <= INTERRUPT_CHECK_INTERVAL)
+    {
+      //raise(SIGINT);
+      return; /* Second interrupt within interval → normal exit from control_client_read_reply */
+    }
+
+  last_interrupt_time = now;
+
+  control_client_interrupt_requested(control_client);
+}
+
 gint
 slng_attach_command(const gchar *command, CommandResponseHandlerFunc cb, gpointer user_data)
 {
-  if (!slng_send_cmd(command, TRUE))
-    return 1;
+  gint ret = 1;
 
-  return control_client_read_reply(control_client, cb, user_data);
+  if (slng_send_cmd(command, TRUE))
+    {
+      struct sigaction old_int, new_int;
+
+      memset(&new_int, 0, sizeof(new_int));
+      new_int.sa_handler = _interrupt;
+      sigemptyset(&new_int.sa_mask);
+      // new_int.sa_flags = SA_RESTART; //0
+      sigaction(SIGINT, &new_int, &old_int);
+
+      ret = control_client_read_reply(control_client, cb, user_data);
+
+      sigaction(SIGINT, &old_int, NULL);
+    }
+  return ret;
 }
 
 static gboolean
@@ -118,7 +153,6 @@ _print_reply_to_stdout(GString *reply, gpointer user_data)
       else
         retval = process_response_status(reply);
     }
-
 
   printf("%s", reply->str);
   return retval;

@@ -35,6 +35,7 @@ struct _ControlClient
   gchar *path;
   FILE *control_socket;
   gint control_fd;
+  gboolean interrupt_requested;
 };
 
 ControlClient *
@@ -110,7 +111,6 @@ control_client_send_command(ControlClient *self, const gchar *cmd, gboolean atta
     }
 
   return sendmsg(self->control_fd, &msg, 0);
-//  return fwrite(cmd, strlen(cmd), 1, self->control_socket);
 }
 
 #define BUFF_LEN 8192
@@ -128,8 +128,17 @@ control_client_read_reply(ControlClient *self, CommandResponseHandlerFunc respon
 
       if (!line)
         {
-          fprintf(stderr, "Error reading or EOF occured on socket, error='%s'\n", strerror(errno));
-          return 1;
+          if (self->interrupt_requested)
+            {
+              control_client_send_command(self, "ATTACH DEBUGGER INTR\n", FALSE);
+              self->interrupt_requested = FALSE;
+              continue;
+            }
+          else
+            {
+              fprintf(stderr, "Error reading or EOF occured on socket, error='%s'\n", strerror(errno));
+              return 1;
+            }
         }
 
       if (strcmp(line, ".\n") == 0)
@@ -142,6 +151,12 @@ control_client_read_reply(ControlClient *self, CommandResponseHandlerFunc respon
 
   g_string_free(chunk, TRUE);
   return retval;
+}
+
+void
+control_client_interrupt_requested(ControlClient *self)
+{
+  self->interrupt_requested = TRUE;
 }
 
 void
