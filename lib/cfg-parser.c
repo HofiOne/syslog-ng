@@ -317,7 +317,7 @@ cfg_parser_parse(CfgParser *self, CfgLexer *lexer, gpointer *instance, gpointer 
   if (parse_result == MEMORY_EXHAUSTED)
     {
       fprintf(stderr,
-              "\nToo many tokens found during parsing, consider increasing YYMAXDEPTH in lib/cfg-grammar.y and recompiling.\n");
+              "\nToo many tokens found during parsing. Consider setting a higher value for the SYSLOG_NG_CONFIG_MAX_STACK_DEPTH environment variable (default: 20,000) and restarting syslog-ng.\nUse it wisely, as it may cause syslog-ng to consume more memory and crash if set to a very high value.\n");
     }
   return success;
 }
