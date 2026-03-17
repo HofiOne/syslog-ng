@@ -1,4 +1,4 @@
-if (NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+if (NOT APPLE)
   add_unit_test (
     CRITERION
     TARGET test_otel_protobuf_parser
