@@ -453,6 +453,10 @@ AC_ARG_ENABLE(tcp-wrapper,
     AS_HELP_STRING([--enable-tcp-wrapper], [Enable support for TCP wrappers.]),
     , enable_tcp_wrapper="auto")
 
+AC_ARG_ENABLE(jemalloc,
+    AS_HELP_STRING([--enable-jemalloc], [Enable support for jemalloc memory allocator (default: no)]),
+    , enable_jemalloc="no")
+
 AC_ARG_ENABLE(spoof-source,
     AS_HELP_STRING([--enable-spoof-source], [Enable support for spoofed source addresses.]),
     , enable_spoof_source="auto")
@@ -1238,6 +1242,51 @@ AC_CHECK_LIB(rt, nanosleep, BASE_LIBS="$BASE_LIBS -lrt")
 AC_CHECK_FUNC(gethostbyname, [], AC_CHECK_LIB(nsl, gethostbyname, BASE_LIBS="$BASE_LIBS -lnsl"))
 AC_CHECK_LIB(regex, regexec, REGEX_LIBS="-lregex")
 AC_CHECK_LIB(resolv, res_init, RESOLV_LIBS="-lresolv")
+
+dnl ***************************************************************************
+dnl jemalloc support
+dnl ***************************************************************************
+
+if test "x$enable_jemalloc" = "xauto" || test "x$enable_jemalloc" = "xyes"; then
+  dnl Check if we are on FreeBSD where jemalloc is built into libc
+  case "${host_os}" in
+    *freebsd*)
+      AC_CHECK_HEADER([malloc_np.h],
+        [
+          AC_MSG_RESULT([FreeBSD built-in jemalloc found (part of libc)])
+          JEMALLOC_LIBS=""
+          enable_jemalloc="yes"
+        ],
+        [
+          if test "x$enable_jemalloc" = "xyes"; then
+            AC_MSG_ERROR([FreeBSD built-in jemalloc not found, but jemalloc support was explicitly enabled.])
+          fi
+          JEMALLOC_LIBS=""
+          enable_jemalloc="no"
+        ])
+      ;;
+    *)
+      dnl On other systems, look for jemalloc as a separate library
+      AC_CHECK_LIB(jemalloc, malloc,
+        [
+          JEMALLOC_LIBS="-ljemalloc"
+          enable_jemalloc="yes"
+        ],
+        [
+          if test "x$enable_jemalloc" = "xyes"; then
+            AC_MSG_ERROR([Could not find libjemalloc, and jemalloc support was explicitly enabled.])
+          fi
+          JEMALLOC_LIBS=""
+          enable_jemalloc="no"
+        ])
+      ;;
+  esac
+else
+  JEMALLOC_LIBS=""
+  enable_jemalloc="no"
+fi
+
+AC_SUBST(JEMALLOC_LIBS)
 
 CHECK_FUNCS_AND_DEFINE([
     fmemopen
@@ -2550,7 +2599,7 @@ if test -z "$MODULE_LDFLAGS"; then
 fi
 MODULE_DEPS_LIBS="\$(top_builddir)/lib/libsyslog-ng.la"
 
-SYSLOGNG_DEPS_LIBS="$LIBS $BASE_LIBS $GLIB_LIBS $EVTLOG_LIBS $SECRETSTORAGE_LIBS $RESOLV_LIBS $LIBCAP_LIBS $PCRE2_LIBS $REGEX_LIBS $DL_LIBS $LIBUNWIND_LIBS $JSON_LIBS $OPENSSL_LIBS"
+SYSLOGNG_DEPS_LIBS="$JEMALLOC_LIBS $LIBS $BASE_LIBS $GLIB_LIBS $EVTLOG_LIBS $SECRETSTORAGE_LIBS $RESOLV_LIBS $LIBCAP_LIBS $PCRE2_LIBS $REGEX_LIBS $DL_LIBS $LIBUNWIND_LIBS $JSON_LIBS $OPENSSL_LIBS"
 
 if test "x$with_ivykis" = "xinternal"; then
     # when using the internal ivykis, we're linking it statically into libsyslog-ng.so
@@ -2637,6 +2686,7 @@ AC_DEFINE_UNQUOTED(ENABLE_MEMTRACE, `enable_value $enable_memtrace`, [Enable mem
 AC_DEFINE_UNQUOTED(ENABLE_SPOOF_SOURCE, `enable_value $enable_spoof_source`, [Enable spoof source support])
 AC_DEFINE_UNQUOTED(ENABLE_IPV6, `enable_value $enable_ipv6`, [Enable IPv6 support])
 AC_DEFINE_UNQUOTED(ENABLE_TCP_WRAPPER, `enable_value $enable_tcp_wrapper`, [Enable TCP wrapper support])
+AC_DEFINE_UNQUOTED(ENABLE_JEMALLOC, `enable_value $enable_jemalloc`, [Enable jemalloc support])
 AC_DEFINE_UNQUOTED(ENABLE_LINUX_CAPS, `enable_value $enable_linux_caps`, [Enable Linux capability management support])
 AC_DEFINE_UNQUOTED(ENABLE_EBPF, `enable_value $enable_ebpf`, [Enable Linux eBPF support])
 AC_DEFINE_UNQUOTED(ENABLE_ENV_WRAPPER, `enable_value $enable_env_wrapper`, [Enable environment wrapper support])
@@ -2884,6 +2934,7 @@ print_config_line "Debug symbols" "${enable_debug:=no}"
 print_config_line "GCC profiling" "${enable_gprof:=no}"
 print_config_line "Memtrace" "${enable_memtrace:=no}"
 print_config_line "IPV6 support" "${enable_ipv6:=no}"
+print_config_line "jemalloc support" "${enable_jemalloc:=no}"
 print_config_line "spoof-source support" "${enable_spoof_source:=no}"
 print_config_line "tcp-wrapper support" "${enable_tcp_wrapper:=no}"
 print_config_line "Linux capability support" "${has_linux_caps:=no}"

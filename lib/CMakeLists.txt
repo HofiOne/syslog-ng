@@ -372,9 +372,9 @@ target_include_directories(syslog-ng
     ${CORE_INCLUDE_DIRS}
 )
 
-target_link_libraries(
-    syslog-ng
+target_link_libraries(syslog-ng
   PUBLIC
+    ${JEMALLOC_LIBRARIES}
     m
     eventlog
     GLib::GLib
