@@ -226,6 +226,7 @@ jobs:
             --enable-debug
             --prefix=${SYSLOG_NG_INSTALL_DIR}
             --enable-tests
+            --enable-jemalloc
             --enable-all-modules
             --with-python=3
             --with-ivykis=internal
@@ -241,6 +242,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug
             -DCMAKE_INSTALL_PREFIX=${SYSLOG_NG_INSTALL_DIR}
             -DENABLE_TESTING=ON
+            -DENABLE_JEMALLOC=ON
             -DPYTHON_VERSION=3
             -DIVYKIS_SOURCE=internal
             -DENABLE_JOURNALD=OFF
@@ -320,6 +322,8 @@ jobs:
             exit 1
           fi
 
+          MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
+
       - name: cmake check
         # FIXME: Some of our checks still do not run correctly on silicon yet (and probably never will)
         #        Criterion tests rerquire none PIE binaries, which is not supported on silicon ARM macs anymore
@@ -351,6 +355,8 @@ jobs:
             grep "Error opening plugin module;" syslog-ng.log
             exit 1
           fi
+
+          MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
 
       - name: make check
         # FIXME: Some of our checks still do not run correctly on silicon yet (and probably never will)
