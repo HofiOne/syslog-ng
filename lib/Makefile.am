@@ -336,8 +336,11 @@ EXTRA_DIST += \
 
 lib/plugin-types.h: lib/cfg-grammar.h
 
+%.table: %.gperf
+	$(GPERF) --language=ANSI-C $< --output $@
+
 %.h: %.table
-	$(GPERF) $< --output $@
+	$(GPERF) --language=ANSI-C $< --output $@
 
 lib/ libsyslog-ng: lib/libsyslog-ng.la
 if IVYKIS_INTERNAL
