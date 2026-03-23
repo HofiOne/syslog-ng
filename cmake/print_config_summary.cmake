@@ -292,7 +292,7 @@ function(print_config_summary)
 
   _print_separator("Modules")
   list(APPEND _modulesOptions "^ENABLE_")
-  list(APPEND _modulesExcludeOptions "${_compilationOptions}" "${_featuresOptions}" "^ENABLE_.*_INFO_STR$" "^ENABLE_.*_WARNING_STR$" "^ENABLE_MANPAGES" "^ENABLE_SPOOF_SOURCE")
+  list(APPEND _modulesExcludeOptions "${_compilationOptions}" "${_featuresOptions}" "^ENABLE_.*_INFO_STR$" "^ENABLE_.*_WARNING_STR$" "^ENABLE_MANPAGES" "^ENABLE_SPOOF_SOURCE" "^ENABLE_COLORED_LOG")
   _print_options("${_variableNames}" "${_modulesOptions}" "${_modulesExcludeOptions}")
 
   _print_separator("")

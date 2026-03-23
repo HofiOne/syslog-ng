@@ -24,8 +24,19 @@
 # ############################################################################
 
 string(ASCII 27 Esc)
-set(Red "${Esc}[31m")
-set(Green "${Esc}[32m")
-set(Yellow "${Esc}[33m")
-set(Blue "${Esc}[34m")
-set(ResetFG "${Esc}[39m")
+
+option(ENABLE_COLORED_LOG "Enable colored log output" ON)
+
+if(${ENABLE_COLORED_LOG} STREQUAL "ON" OR ${ENABLE_COLORED_LOG} STREQUAL "TRUE" OR ${ENABLE_COLORED_LOG} STREQUAL "YES")
+  set(Red "${Esc}[31m")
+  set(Green "${Esc}[32m")
+  set(Yellow "${Esc}[33m")
+  set(Blue "${Esc}[34m")
+  set(ResetFG "${Esc}[39m")
+else()
+  set(Red "")
+  set(Green "")
+  set(Yellow "")
+  set(Blue "")
+  set(ResetFG "")
+endif()
