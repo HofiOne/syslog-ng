@@ -130,7 +130,9 @@ liburing-devel                  [opensuse, rhel, rocky]
 
 gdb                             [kira]
 faketime                        [kira]
+# try to run kira tests with jemalloc
 libdbd-mysql                    [kira]
+libjemalloc-dev                 [kira]
 lsb-release                     [kira]
 lsof                            [kira]
 netbase                         [kira]
@@ -176,7 +178,7 @@ python3-dbg                     [devshell]
 strace                          [devshell]
 valgrind                        [devshell]
 openssh-client                  [devshell]
-# v3.1 is bogus as it can be, also it not compatible with the latest versions, build from a common source instead
+# the default v3.1 on many OSes is bogus as it can be, also it is not compatible with the latest versions, build from a common source instead
 #astyle                          [devshell]
 snmptrapd                       [devshel, ubuntu, debian]
 dwarves                         [devshell]

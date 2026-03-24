@@ -170,6 +170,9 @@ jobs:
             image:
               name: devshell
               arch_suffix: "-i386"
+              # TODO: jemalloc causes hangs in some kira tests, investigate and fix it, but for now just disable it for i386
+              configure_flags: "--disable-jemalloc"
+              cmake_configure_flags: "-DENABLE_JEMALLOC=OFF"
             build-tool: cmake
             cc: gcc
 
@@ -220,6 +223,7 @@ jobs:
             --enable-debug
             --prefix=${SYSLOG_NG_INSTALL_DIR}
             --enable-tests
+            --enable-jemalloc=auto
             --enable-all-modules
             --with-python=3
             --with-ivykis=internal
@@ -235,6 +239,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=${SYSLOG_NG_INSTALL_DIR}
             -DSUMMARY_LEVEL=1
             -DENABLE_TESTING=ON
+            -DENABLE_JEMALLOC=AUTO
             -DPYTHON_VERSION=3
             -DIVYKIS_SOURCE=internal
             -DENABLE_JAVA=OFF
@@ -278,7 +283,22 @@ jobs:
         working-directory: ./build
         run: |
           make install -j $(nproc)
-          "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -Fdevt -V 2>&1 |sort
+
+          echo ""
+          echo "Checking produced installation..."
+          "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -FdevtV > syslog-ng.unsorted.log 2>&1
+          sort syslog-ng.unsorted.log > syslog-ng.log
+
+          cat syslog-ng.log
+          # Check for failing modules
+          if grep -q "Error opening plugin module;" syslog-ng.log; then
+            echo "Modules failing to load:"
+            grep "Error opening plugin module;" syslog-ng.log
+            exit 1
+          fi
+          if [ "${{ matrix.image.arch_suffix }}" != "-i386" ]; then
+            MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
+          fi
 
       - name: make check
         # Skip testing for now in none-devshell images

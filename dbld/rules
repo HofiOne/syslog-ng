@@ -47,13 +47,19 @@ DOCKER_PLATFORM_ARCH := $(if $(filter i386,$(CONTAINER_ARCH)),386,$(CONTAINER_AR
 
 MODE ?= snapshot
 VERSION ?= $(shell MODE=${MODE} scripts/version.sh)
+CONFIGURE_PREFIX_OPT=--prefix=/install
+CONFIGURE_SWITCH_OPTS=--enable-debug --enable-manpages --with-python=3 $(CONFIGURE_ADD)
+CONFIGURE_OPTS=$(CONFIGURE_PREFIX_OPT) $(CONFIGURE_SWITCH_OPTS)
 DOCKER_RUN_ARGS=-e USER_NAME_ON_HOST=$(shell whoami)	\
-	--network=host --privileged \
+	--network=host \
+	--privileged \
 	--ulimit nofile=1024:1024 \
 	-v $(ROOT_DIR):/source \
 	-v $(DBLD_DIR):/dbld \
 	-v $(DBLD_DIR)/build:/build \
 	-v $(DBLD_DIR)/install:/install \
+	-e CONFIGURE_PREFIX_OPT="$${CONFIGURE_PREFIX_OPT:-$(CONFIGURE_PREFIX_OPT)}" \
+	-e CONFIGURE_SWITCH_OPTS="$${CONFIGURE_SWITCH_OPTS:-$(CONFIGURE_SWITCH_OPTS)}" \
 	-e CONFIGURE_OPTS="$${CONFIGURE_OPTS:-$(CONFIGURE_OPTS)}" \
 	-e CCACHE_DIR=/build/ccache \
 	-e MODE=$(MODE) \
@@ -72,7 +78,6 @@ TARBALL_BASENAME=syslog-ng-$(VERSION).tar.gz
 TARBALL=$(BUILD_DIR)/$(TARBALL_BASENAME)
 GIT=$(shell which git || echo false)
 GIT_RELEASE_TAG=syslog-ng-$(VERSION)
-CONFIGURE_OPTS=--enable-debug --enable-manpages --with-python=3 --prefix=/install $(CONFIGURE_ADD)
 DBLD_RULES=$(MAKE) --no-print-directory -f $(DBLD_DIR)/rules
 
 DOCKER_INTERACTIVE=$(shell if tty -s; then echo "-ti"; else echo "-i"; fi)

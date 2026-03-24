@@ -70,7 +70,8 @@ jobs:
             --disable-dependency-tracking
             --prefix=${SYSLOG_NG_INSTALL_DIR}
             --enable-tests
-            --disable-stackdump
+            --enable-stackdump
+            --enable-jemalloc
             --with-python=3
             --with-ivykis=internal
             --with-systemd-journal=no
@@ -85,7 +86,8 @@ jobs:
             -DSUMMARY_LEVEL=1
             -DCMAKE_INSTALL_PREFIX=${SYSLOG_NG_INSTALL_DIR}
             -DENABLE_TESTING=ON
-            -DENABLE_STACKDUMP=OFF
+            -DENABLE_STACKDUMP=ON
+            -DENABLE_JEMALLOC=ON
             -DPYTHON_VERSION=3
             -DIVYKIS_SOURCE=internal
             -DENABLE_JOURNALD=OFF
@@ -154,7 +156,20 @@ jobs:
           cmake --install-prefix "${SYSLOG_NG_INSTALL_DIR}" -B build . ${CMAKE_CONFIGURE_FLAGS}
           cmake --build ./build -j ${THREADS}  --target install
 
-          "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -FdevtV 2>&1 |sort
+          echo ""
+          echo "Checking produced installation..."
+          "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -FdevtV > syslog-ng.unsorted.log 2>&1
+          sort syslog-ng.unsorted.log > syslog-ng.log
+
+          cat syslog-ng.log
+          # Check for failing modules
+          if grep -q "Error opening plugin module;" syslog-ng.log; then
+            echo "Modules failing to load:"
+            grep "Error opening plugin module;" syslog-ng.log
+            exit 1
+          fi
+
+          MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
 
       - name: cmake check
         if: matrix.build-tool == 'cmake'
@@ -186,7 +201,20 @@ jobs:
           cd ..
           /usr/local/bin/gmake -C build install -j ${THREADS}
 
-          "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -FdevtV 2>&1 |sort
+          echo ""
+          echo "Checking produced installation..."
+          "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -FdevtV > syslog-ng.unsorted.log 2>&1
+          sort syslog-ng.unsorted.log > syslog-ng.log
+
+          cat syslog-ng.log
+          # Check for failing modules
+          if grep -q "Error opening plugin module;" syslog-ng.log; then
+            echo "Modules failing to load:"
+            grep "Error opening plugin module;" syslog-ng.log
+            exit 1
+          fi
+
+          MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
 
       - name: autotools check
         if: matrix.build-tool == 'autotools'

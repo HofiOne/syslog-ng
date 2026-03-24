@@ -1,6 +1,4 @@
 # ############################################################################
-# Copyright (c) 2017 Balabit
-# Copyright (c) 2022 One Identity
 # Copyright (c) 2025 Istvan Hoffmann <hofione@gmail.com>
 #
 # This library is free software; you can redistribute it and/or
@@ -23,20 +21,33 @@
 #
 # ############################################################################
 
-string(ASCII 27 Esc)
+set(ENABLE_JEMALLOC "OFF" CACHE STRING "Enable jemalloc memory allocator support: ON, OFF, AUTO")
+set_property(CACHE ENABLE_JEMALLOC PROPERTY STRINGS AUTO ON OFF)
+message(STATUS "Checking jemalloc support")
 
-option(ENABLE_COLORED_LOG "Enable colored log output" ON)
+if(ENABLE_JEMALLOC STREQUAL "OFF")
+  set(SYSLOG_NG_ENABLE_JEMALLOC OFF)
+  message(STATUS "  jemalloc support: disabled (forced OFF)")
+  return()
+endif()
 
-if(${ENABLE_COLORED_LOG} STREQUAL "ON" OR ${ENABLE_COLORED_LOG} STREQUAL "TRUE" OR ${ENABLE_COLORED_LOG} STREQUAL "YES")
-  set(Red "${Esc}[31m")
-  set(Green "${Esc}[32m")
-  set(Yellow "${Esc}[33m")
-  set(Blue "${Esc}[34m")
-  set(ResetFG "${Esc}[39m")
+include(find_jemalloc)
+
+if("${ENABLE_JEMALLOC}" MATCHES "^(auto|AUTO)$")
+  if(JEMALLOC_FOUND)
+    set(SYSLOG_NG_ENABLE_JEMALLOC ON)
+    message(STATUS "  jemalloc support: enabled (AUTO, found libjemalloc)")
+  else()
+    set(SYSLOG_NG_ENABLE_JEMALLOC OFF)
+    message(STATUS "  jemalloc support: disabled (AUTO, libjemalloc not found)")
+  endif()
+elseif(ENABLE_JEMALLOC STREQUAL "ON")
+  if(NOT JEMALLOC_FOUND)
+    message(FATAL_ERROR "Could not find libjemalloc, and jemalloc support was explicitly enabled.")
+  endif()
+
+  set(SYSLOG_NG_ENABLE_JEMALLOC ON)
+  message(STATUS "  jemalloc support: enabled (forced ON)")
 else()
-  set(Red "")
-  set(Green "")
-  set(Yellow "")
-  set(Blue "")
-  set(ResetFG "")
+  message(FATAL_ERROR "Invalid value (${ENABLE_JEMALLOC}) for ENABLE_JEMALLOC (must be ON, OFF, or AUTO)")
 endif()

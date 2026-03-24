@@ -90,6 +90,19 @@ static GOptionEntry syslogng_options[] =
   { NULL },
 };
 
+#if SYSLOG_NG_ENABLE_JEMALLOC
+/*
+ * Default jemalloc configuration embedded in the binary.
+ * Can be overridden at runtime via MALLOC_CONF env var.
+ * See: https://jemalloc.net/jemalloc.3.html#tuning
+ */
+const char *je_malloc_conf =
+  "background_thread:true"   /* Enable async memory decay thread for daemon processes */
+  ",dirty_decay_ms:5000"     /* Return dirty pages to OS after 5 seconds - better for bursty traffic */
+  ",muzzy_decay_ms:10000"    /* Return muzzy pages to OS after 10 seconds */
+  ",narenas:8"               /* Limit arenas to reduce fragmentation while allowing some parallelism */
+  ",tcache_max:4096";        /* Thread cache size limit - log messages are typically small */
+#endif
 
 static void
 resolve_paths_in_help_texts(void)
