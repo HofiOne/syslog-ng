@@ -284,7 +284,10 @@ jobs:
         run: |
           make install -j $(nproc)
 
-          echo ""
+      - name: check installed binary
+        if: ${{ matrix.image.name == 'devshell' || github.event_name == 'schedule' || inputs.use_all == 'true' }}
+        working-directory: ./build
+        run: |
           echo "Checking produced installation..."
           "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -FdevtV > syslog-ng.unsorted.log 2>&1
           sort syslog-ng.unsorted.log > syslog-ng.log
@@ -296,9 +299,10 @@ jobs:
             grep "Error opening plugin module;" syslog-ng.log
             exit 1
           fi
-          if [ "${{ matrix.image.arch_suffix }}" != "-i386" ]; then
-            MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
-          fi
+
+      - name: jemalloc stats
+        if: ${{ matrix.image.name == 'devshell' && matrix.image.arch_suffix != '-i386'}}
+        run: MALLOC_CONF=stats_print:true "${SYSLOG_NG_INSTALL_DIR}/sbin/syslog-ng" -V 2>&1 | grep -A50 "jemalloc"
 
       - name: make check
         # Skip testing for now in none-devshell images
