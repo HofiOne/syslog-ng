@@ -230,21 +230,48 @@ _queue_thread(LogScheduler *self, LogSchedulerThreadState *thread_state, LogMess
 }
 
 static void
-_thread_state_init(LogScheduler *self, LogSchedulerThreadState *state)
+_thread_state_init(LogScheduler *self, LogSchedulerThreadState *state, gint thread_index)
 {
   worker_batch_callback_init(&state->batch_callback);
   state->batch_callback.func = _flush_batch;
   state->batch_callback.user_data = self;
 
+  state->batch_by_partition = g_new0(struct iv_list_head, self->options->num_partitions);
   for (gint i = 0; i < self->options->num_partitions; i++)
     INIT_IV_LIST_HEAD(&state->batch_by_partition[i]);
+
+}
+
+static LogSchedulerThreadState *
+_ensure_thread_state(LogScheduler *self, gint thread_index)
+{
+  LogSchedulerThreadState *state = &self->thread_states[thread_index];
+
+  /* Lazy initialization, only allocate batch_by_partition on first use */
+  if (G_UNLIKELY(state->batch_by_partition == NULL))
+    _thread_state_init(self, state, thread_index);
+
+  return state;
 }
 
 static void
-_init_thread_states(LogScheduler *self)
+_thread_state_clear(LogSchedulerThreadState *state)
+{
+  /* Lazy init means some still might be NULL */
+  if (state->batch_by_partition)
+    {
+      g_free(state->batch_by_partition);
+      state->batch_by_partition = NULL;
+    }
+}
+
+static void
+_free_thread_states(LogScheduler *self)
 {
   for (gint i = 0; i < self->num_threads; i++)
-    _thread_state_init(self, &self->thread_states[i]);
+    _thread_state_clear(&self->thread_states[i]);
+  g_free(self->thread_states);
+  self->thread_states = NULL;
 }
 
 static void
@@ -289,7 +316,7 @@ log_scheduler_push(LogScheduler *self, LogMessage *msg, const LogPathOptions *pa
       return;
     }
 
-  LogSchedulerThreadState *thread_state = &self->thread_states[thread_index];
+  LogSchedulerThreadState *thread_state = _ensure_thread_state(self, thread_index);
   _queue_thread(self, thread_state, msg, path_options);
 }
 
@@ -297,12 +324,14 @@ LogScheduler *
 log_scheduler_new(LogSchedulerOptions *options, LogPipe *front_pipe)
 {
   gint max_threads = main_loop_worker_get_max_number_of_threads();
-  LogScheduler *self = g_malloc0(sizeof(LogScheduler) + max_threads * sizeof(LogSchedulerThreadState));
+  LogScheduler *self = g_new0(LogScheduler, 1);
   self->num_threads = max_threads;
   self->options = options;
   self->front_pipe = log_pipe_ref(front_pipe);
 
-  _init_thread_states(self);
+  /* Allocate thread_states array but don't initialize yet (lazy init on first use) */
+  self->thread_states = g_new0(LogSchedulerThreadState, max_threads);
+
   _init_partitions(self);
   return self;
 }
@@ -312,6 +341,7 @@ log_scheduler_free(LogScheduler *self)
 {
   log_pipe_unref(self->front_pipe);
   _free_partitions(self);
+  _free_thread_states(self);
   g_free(self);
 }
 
@@ -344,9 +374,10 @@ log_scheduler_push(LogScheduler *self, LogMessage *msg, const LogPathOptions *pa
 LogScheduler *
 log_scheduler_new(LogSchedulerOptions *options, LogPipe *front_pipe)
 {
-  LogScheduler *self = g_malloc0(sizeof(LogScheduler) + 0 * sizeof(LogSchedulerThreadState));
+  LogScheduler *self = g_new0(LogScheduler, 1);
   self->options = options;
   self->front_pipe = log_pipe_ref(front_pipe);
+  self->thread_states = NULL;  /* Not used without iv_work_pool support */
 
   return self;
 }
