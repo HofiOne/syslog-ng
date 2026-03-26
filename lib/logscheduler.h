@@ -68,7 +68,7 @@ typedef struct _LogScheduler
   LogPipe *front_pipe;
   LogSchedulerOptions *options;
   gint num_threads;
-  LogSchedulerPartition partitions[LOGSCHEDULER_MAX_PARTITIONS];
+  LogSchedulerPartition *partitions;
   LogSchedulerThreadState thread_states[];
 } LogScheduler;
 
@@ -80,6 +80,7 @@ LogScheduler *log_scheduler_new(LogSchedulerOptions *options, LogPipe *front_pip
 void log_scheduler_free(LogScheduler *self);
 
 void log_scheduler_options_set_partition_key_ref(LogSchedulerOptions *options, LogTemplate *partition_key);
+void log_scheduler_options_set_num_partitions(LogSchedulerOptions *options, gint num_partitions);
 void log_scheduler_options_defaults(LogSchedulerOptions *options);
 gboolean log_scheduler_options_init(LogSchedulerOptions *options, GlobalConfig *cfg);
 void log_scheduler_options_destroy(LogSchedulerOptions *options);

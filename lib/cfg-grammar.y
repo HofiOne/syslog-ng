@@ -760,7 +760,7 @@ log_scheduler_options
 log_scheduler_option
         : KW_PARTITIONS '(' nonnegative_integer ')'
           {
-            last_scheduler_options->num_partitions = $3;
+            log_scheduler_options_set_num_partitions(last_scheduler_options, $3);
           }
         | KW_PARTITION_KEY '(' template_content ')'
           {
@@ -768,7 +768,7 @@ log_scheduler_option
           }
         | KW_WORKERS '(' nonnegative_integer ')'
           {
-            last_scheduler_options->num_partitions = $3;
+            log_scheduler_options_set_num_partitions(last_scheduler_options, $3);
           }
         | KW_WORKER_PARTITION_KEY '(' template_content ')'
           {

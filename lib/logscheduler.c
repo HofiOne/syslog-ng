@@ -250,6 +250,7 @@ _init_thread_states(LogScheduler *self)
 static void
 _init_partitions(LogScheduler *self)
 {
+  self->partitions = g_new0(LogSchedulerPartition, self->options->num_partitions);
   for (gint i = 0; i < self->options->num_partitions; i++)
     _partition_init(&self->partitions[i], self->front_pipe);
 }
@@ -259,6 +260,8 @@ _free_partitions(LogScheduler *self)
 {
   for (gint i = 0; i < self->options->num_partitions; i++)
     _partition_clear(&self->partitions[i]);
+  g_free(self->partitions);
+  self->partitions = NULL;
 }
 
 gboolean
@@ -365,6 +368,41 @@ log_scheduler_options_set_partition_key_ref(LogSchedulerOptions *options, LogTem
 }
 
 void
+_log_scheduler_readjust_num_partitions(LogSchedulerOptions *options, gint num_partitions)
+{
+  gint max_threads = main_loop_worker_get_max_number_of_threads();
+
+  if (num_partitions > max_threads)
+    {
+      msg_warning("The partitions() setting exceeds the maximum number of worker threads, "
+                  "clamping to worker thread count for optimal performance",
+                  evt_tag_int("partitions", num_partitions),
+                  evt_tag_int("max-worker-threads", max_threads));
+      num_partitions = max_threads;
+    }
+
+  gint optimal_partitions = max_threads / 2;
+  if (num_partitions > optimal_partitions)
+    {
+      gint memory_per_thread_bytes = num_partitions * sizeof(struct iv_list_head);
+      msg_info("High partitions() setting increases memory usage and lock contention; "
+               "consider using half the worker thread count for optimal balance",
+               evt_tag_int("partitions", num_partitions),
+               evt_tag_int("max-threads", max_threads),
+               evt_tag_int("recommended-optimal", optimal_partitions),
+               evt_tag_int("memory-per-active-thread-bytes", memory_per_thread_bytes));
+    }
+}
+
+void
+log_scheduler_options_set_num_partitions(LogSchedulerOptions *options, gint num_partitions)
+{
+  /* NOTE: we cannot readjust the number of partitions here as main_loop_worker_get_max_number_of_threads may not be finalized yet */
+  // _log_scheduler_readjust_num_partitions(options, num_partitions);
+  options->num_partitions = num_partitions;
+}
+
+void
 log_scheduler_options_defaults(LogSchedulerOptions *options)
 {
   options->num_partitions = -1;
@@ -376,8 +414,7 @@ log_scheduler_options_init(LogSchedulerOptions *options, GlobalConfig *cfg)
 {
   if (options->num_partitions == -1)
     options->num_partitions = 0;
-  if (options->num_partitions > LOGSCHEDULER_MAX_PARTITIONS)
-    options->num_partitions = LOGSCHEDULER_MAX_PARTITIONS;
+  _log_scheduler_readjust_num_partitions(options, options->num_partitions);
   return TRUE;
 }
 
