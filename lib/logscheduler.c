@@ -240,6 +240,11 @@ _thread_state_init(LogScheduler *self, LogSchedulerThreadState *state, gint thre
   for (gint i = 0; i < self->options->num_partitions; i++)
     INIT_IV_LIST_HEAD(&state->batch_by_partition[i]);
 
+  /* Spread initial partition assignment to avoid thundering herd on partition 0 */
+  if (self->options->num_partitions > 0)
+    state->last_partition = thread_index % self->options->num_partitions;
+  else
+    state->last_partition = 0;
 }
 
 static LogSchedulerThreadState *
