@@ -407,13 +407,13 @@ void
 _log_scheduler_readjust_num_partitions(LogSchedulerOptions *options, gint num_partitions)
 {
   gint max_threads = main_loop_worker_get_max_number_of_threads();
-
   if (num_partitions > max_threads)
     {
       msg_warning("The partitions() setting exceeds the maximum number of worker threads, "
                   "clamping to worker thread count for optimal performance",
                   evt_tag_int("partitions", num_partitions),
-                  evt_tag_int("max-worker-threads", max_threads));
+                  evt_tag_int("max-threads", max_threads),
+                  evt_tag_int("clamped-to", max_threads));
       num_partitions = max_threads;
     }
 
