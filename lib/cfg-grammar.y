@@ -727,18 +727,18 @@ log_items
 	;
 
 log_item
-        : KW_SOURCE '(' string ')'		{ $$ = log_expr_node_new_source_reference($3, &@$); free($3); }
+        : KW_SOURCE '(' string ')'		          { $$ = log_expr_node_new_source_reference($3, &@$); free($3); }
         | KW_SOURCE '{' source_content '}'      { $$ = log_expr_node_new_source(NULL, $3, &@$); }
-        | KW_FILTER '(' string ')'		{ $$ = log_expr_node_new_filter_reference($3, &@$); free($3); }
+        | KW_FILTER '(' string ')'		          { $$ = log_expr_node_new_filter_reference($3, &@$); free($3); }
         | KW_FILTER '{' filter_content '}'      { $$ = log_expr_node_new_filter(NULL, $3, &@$); }
         | KW_PARSER '(' string ')'              { $$ = log_expr_node_new_parser_reference($3, &@$); free($3); }
         | KW_PARSER '{' parser_content '}'      { $$ = log_expr_node_new_parser(NULL, $3, &@$); }
         | KW_REWRITE '(' string ')'             { $$ = log_expr_node_new_rewrite_reference($3, &@$); free($3); }
         | KW_REWRITE '{' rewrite_content '}'    { $$ = log_expr_node_new_rewrite(NULL, $3, &@$); }
-        | KW_DESTINATION '(' string ')'		{ $$ = log_expr_node_new_destination_reference($3, &@$); free($3); }
+        | KW_DESTINATION '(' string ')'		      { $$ = log_expr_node_new_destination_reference($3, &@$); free($3); }
         | KW_DESTINATION '{' dest_content '}'   { $$ = log_expr_node_new_destination(NULL, $3, &@$); }
         | log_scheduler                         { $$ = $1; }
-        | log_conditional			{ $$ = $1; }
+        | log_conditional			                  { $$ = $1; }
         | log_junction                          { $$ = $1; }
 	;
 
