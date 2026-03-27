@@ -53,11 +53,13 @@ typedef struct _LogSchedulerThreadState
 
   guint64 num_messages;
   gint last_partition;
+  gint batch_countdown;
 } LogSchedulerThreadState;
 
 typedef struct _LogSchedulerOptions
 {
   gint num_partitions;
+  gint batch_size;
   LogTemplate *partition_key;
 } LogSchedulerOptions;
 
@@ -79,6 +81,7 @@ void log_scheduler_free(LogScheduler *self);
 
 void log_scheduler_options_set_partition_key_ref(LogSchedulerOptions *options, LogTemplate *partition_key);
 void log_scheduler_options_set_num_partitions(LogSchedulerOptions *options, gint num_partitions);
+void log_scheduler_options_set_batch_size(LogSchedulerOptions *options, gint batch_size);
 void log_scheduler_options_defaults(LogSchedulerOptions *options);
 gboolean log_scheduler_options_init(LogSchedulerOptions *options, GlobalConfig *cfg);
 void log_scheduler_options_destroy(LogSchedulerOptions *options);

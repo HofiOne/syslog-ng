@@ -170,20 +170,32 @@ _partition_clear(LogSchedulerPartition *partition)
 
 /* LogSchedulerThreadState */
 
+static inline void
+_advance_partition(gint *partition, gint num_partitions)
+{
+  if (++(*partition) >= num_partitions)
+    *partition = 0;
+}
+
 static guint
 _get_partition_index(LogScheduler *self, LogSchedulerThreadState *thread_state, LogMessage *msg)
 {
-  if (!self->options->partition_key)
-    {
-      gint partition_index = thread_state->last_partition;
-      thread_state->last_partition = (thread_state->last_partition + 1) % self->options->num_partitions;
-      return partition_index;
-    }
-  else
+  if (self->options->partition_key)
     {
       LogTemplateEvalOptions options = DEFAULT_TEMPLATE_EVAL_OPTIONS;
       return log_template_hash(self->options->partition_key, msg, &options) % self->options->num_partitions;
     }
+
+  if (self->options->batch_size > 0)
+    {
+      if (--thread_state->batch_countdown > 0)
+        return thread_state->last_partition;
+      thread_state->batch_countdown = self->options->batch_size;
+    }
+
+  gint partition_index = thread_state->last_partition;
+  _advance_partition(&thread_state->last_partition, self->options->num_partitions);
+  return partition_index;
 }
 
 static gpointer
@@ -245,6 +257,8 @@ _thread_state_init(LogScheduler *self, LogSchedulerThreadState *state, gint thre
     state->last_partition = thread_index % self->options->num_partitions;
   else
     state->last_partition = 0;
+
+  state->batch_countdown = self->options->batch_size;
 }
 
 static LogSchedulerThreadState *
@@ -439,9 +453,16 @@ log_scheduler_options_set_num_partitions(LogSchedulerOptions *options, gint num_
 }
 
 void
+log_scheduler_options_set_batch_size(LogSchedulerOptions *options, gint batch_size)
+{
+  options->batch_size = batch_size;
+}
+
+void
 log_scheduler_options_defaults(LogSchedulerOptions *options)
 {
   options->num_partitions = -1;
+  options->batch_size = 0;
   options->partition_key = NULL;
 }
 
@@ -450,6 +471,13 @@ log_scheduler_options_init(LogSchedulerOptions *options, GlobalConfig *cfg)
 {
   if (options->num_partitions == -1)
     options->num_partitions = 0;
+
+  if (options->batch_size > 0 && options->partition_key)
+    {
+      msg_error("parallelize(): batch_size() and worker_partition_key() are mutually exclusive");
+      return FALSE;
+    }
+
   _log_scheduler_readjust_num_partitions(options, options->num_partitions);
   return TRUE;
 }
