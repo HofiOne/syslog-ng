@@ -150,8 +150,8 @@ LogRotateStatus logrotate_do_rotate(LogRotateOptions *logrotate_options, const g
       return LR_ERROR;
     }
 
-  msg_info("Maximum log file size reached, rotating log file ... ",
-           evt_tag_str("filename", filename));
+  msg_verbose("Maximum log file size reached, rotating log file ... ",
+              evt_tag_str("filename", filename));
 
   // (1) check if main log file exists
   if (!g_file_test(filename, G_FILE_TEST_EXISTS))

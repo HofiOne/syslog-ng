@@ -139,10 +139,10 @@ _dw_reopen(AFFileDestWriter *self, LogProtoClient **p)
   int fd;
   struct stat st;
 
-  msg_verbose("Initializing destination file writer",
-              evt_tag_str("template", self->owner->filename_template->template_str),
-              evt_tag_str("filename", self->filename),
-              evt_tag_str("symlink_as", self->owner->symlink_as));
+  msg_debug("Initializing destination file writer",
+            evt_tag_str("template", self->owner->filename_template->template_str),
+            evt_tag_str("filename", self->filename),
+            evt_tag_str("symlink_as", self->owner->symlink_as));
 
   self->last_open_stamp = self->last_msg_stamp;
   if (self->owner->overwrite_if_older > 0 &&
@@ -260,8 +260,8 @@ affile_dw_logrotate(AFFileDestWriter *self, gpointer user_data)
       if (open_result == FILE_OPENER_RESULT_SUCCESS)
         {
           /* best case --> continue with opened file */
-          msg_info("Reopened log file after logrotate",
-                   evt_tag_str("filename", self->filename));
+          msg_verbose("Reopened log file after logrotate",
+                      evt_tag_str("filename", self->filename));
           logrotate_options->pending = FALSE;
         }
       else
