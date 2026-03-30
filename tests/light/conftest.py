@@ -143,14 +143,27 @@ def syslog_ng(request: pytest.FixtureRequest, testcase_parameters: TestcaseParam
 
 
 class TeardownRegistry:
-    teardown_callbacks = []
+    def __init__(self):
+        self.teardown_callbacks = []
 
     def register(self, teardown_callback):
-        TeardownRegistry.teardown_callbacks.append(teardown_callback)
+        self.teardown_callbacks.append(teardown_callback)
 
     def execute_teardown_callbacks(self):
-        for teardown_callback in TeardownRegistry.teardown_callbacks:
-            teardown_callback()
+        exceptions = []
+        for teardown_callback in self.teardown_callbacks:
+            try:
+                teardown_callback()
+            except Exception as e:
+                logger.error(f"Teardown callback failed: {teardown_callback}, error: {e}")
+                exceptions.append(e)
+
+        # Clear callbacks after execution
+        self.teardown_callbacks.clear()
+
+        # Re-raise the first exception if any occurred, but after all cleanups
+        if exceptions:
+            raise exceptions[0]
 
 
 @pytest.fixture(scope="function")
