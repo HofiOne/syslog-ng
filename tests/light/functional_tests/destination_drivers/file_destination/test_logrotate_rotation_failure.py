@@ -23,19 +23,36 @@
 import glob
 import math
 import os
-from time import sleep
+
+from src.common.blocking import wait_until_true
 
 
-def test_logrotate_rotation_failure(config, syslog_ng):
+def test_logrotate_rotation_failure(config, syslog_ng, teardown):
     src_file_name = "input-rotation-failure.log"
     dest_file_name = "logfile-rotation-failure.log"
     max_size = 1000
     max_rotations = 3
 
+    # Register cleanup for log files
+    def cleanup_log_files():
+        for file in glob.glob(src_file_name + "*"):
+            try:
+                os.remove(file)
+            except OSError:
+                pass
+        for file in glob.glob(dest_file_name + "*"):
+            try:
+                os.remove(file)
+            except OSError:
+                pass
+
+    teardown.register(cleanup_log_files)
+
     message = "message-text\n"
     msg_per_file = math.ceil(max_size / len(message.encode('utf-8')))
     counter = msg_per_file * max_rotations
 
+    config.update_global_options(stats_level=1)
     file_source = config.create_file_source(file_name=src_file_name)
     file_destination = config.create_file_destination(file_name=dest_file_name, logrotate="enable(yes), rotations(" + str(max_rotations) + "), size(" + str(max_size) + ")")
 
@@ -45,10 +62,12 @@ def test_logrotate_rotation_failure(config, syslog_ng):
     for _ in range(counter):
         file_source.write_log(message)
 
+    # Disable verbose logging to avoid shutdown message timeout in CI
+    syslog_ng.start_params.verbose = False
     syslog_ng.start(config)
 
-    # wait until syslog has written logfiles
-    sleep(2)
+    # wait until all messages have been processed
+    assert wait_until_true(lambda: "processed" in file_destination.get_stats() and file_destination.get_stats()["processed"] == counter)
 
     # check current number of logfiles
     log_file_list = glob.glob(dest_file_name + "*")
@@ -62,8 +81,8 @@ def test_logrotate_rotation_failure(config, syslog_ng):
     for _ in range(msg_per_file):
         file_source.write_log(message)
 
-    # wait until syslog has written logfiles
-    sleep(2)
+    # wait until all new messages have been processed
+    assert wait_until_true(lambda: "processed" in file_destination.get_stats() and file_destination.get_stats()["processed"] == counter + msg_per_file)
 
     # rotation should recognise a logfile is missing and not delete other files
     log_file_list = glob.glob(dest_file_name + "*")
