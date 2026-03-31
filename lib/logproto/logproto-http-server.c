@@ -77,7 +77,7 @@ _compose_response_header(LogProtoHTTPServer *self, const gchar *data G_GNUC_UNUS
                          gboolean close_after_sent)
 {
   const gint maxContentNumLength = 5;
-  static const gchar close_str[] = "Connection: close\n";
+  static const gchar close_str[] = "Connection: close";
   static const gchar response_header_fmt[] = "%s\n"
                                              "Content-Type: text/plain; version=0.0.4\n"
                                              "Content-Length: %*lu\n"
@@ -96,7 +96,7 @@ static gssize
 _send_response(LogProtoHTTPServer *self, const gchar *data, gsize data_len, gboolean close_after_sent)
 {
   GString *response = self->response_header_composer(self, data, data_len, close_after_sent);
-  if (response && data && data > 0)
+  if (response && data && data_len > 0)
     g_string_append(response, data);
 
   gssize sent_bytes = -1;
