@@ -105,17 +105,17 @@ static gint
 _check_request_headers(LogProtoHTTPServer *s, gchar *buffer_start, gsize buffer_bytes)
 {
   LogProtoHTTPScraperResponder *self = (LogProtoHTTPScraperResponder *)s;
-  gint status = 200; // HTTP/1.1 200 OK
+  gint status = HTTP_STATUS_OK;
 
   g_mutex_lock(_mutex());
   iv_validate_now();
   time_t now = iv_now.tv_sec;
   time_t ellapsed = now - last_scrape_request_time;
   if (self->options->scrape_freq_limit && ellapsed < self->options->scrape_freq_limit)
-    status = 429; // HTTP/1.1 429 Too Many Requests
+    status = HTTP_STATUS_TOO_MANY_REQUESTS;
   last_scrape_request_time = now;
   g_mutex_unlock(_mutex());
-  if (status != 200)
+  if (status != HTTP_STATUS_OK)
     {
       msg_trace("Too frequent scraper requests, ignoring for now",
                 evt_tag_int("last-request", ellapsed),
@@ -129,7 +129,7 @@ _check_request_headers(LogProtoHTTPServer *s, gchar *buffer_start, gsize buffer_
     {
       msg_trace("Scraper request header did not match", evt_tag_str("header", header->str), evt_tag_str("expected-header",
                 self->options->scraper_request_hdr_pattern));
-      status = 400; // HTTP/1.1 400 Bad Request
+      status = HTTP_STATUS_BAD_REQUEST;
     }
   g_string_free(header, TRUE);
   g_pattern_spec_free(pattern);

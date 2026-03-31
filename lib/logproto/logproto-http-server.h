@@ -27,9 +27,17 @@
 #include "logproto/logproto-server.h"
 #include "logproto/logproto-text-server.h"
 
-static const gchar http_too_many_request_msg[] = "HTTP/1.1 429 Too Many Requests";
-static const gchar http_bad_request_msg[] = "HTTP/1.1 400 Bad Request";
+/* HTTP status codes */
+#define HTTP_STATUS_OK 200
+#define HTTP_STATUS_BAD_REQUEST 400
+#define HTTP_STATUS_TOO_MANY_REQUESTS 429
+#define HTTP_STATUS_INTERNAL_SERVER_ERROR 500
+
+/* HTTP status line messages */
 static const gchar http_ok_msg[] = "HTTP/1.1 200 OK";
+static const gchar http_bad_request_msg[] = "HTTP/1.1 400 Bad Request";
+static const gchar http_too_many_request_msg[] = "HTTP/1.1 429 Too Many Requests";
+static const gchar http_response_too_large_msg[] = "HTTP/1.1 500 Internal Server Error";
 
 typedef struct _LogProtoHTTPServerOptions
 {

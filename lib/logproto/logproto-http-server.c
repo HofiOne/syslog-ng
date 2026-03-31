@@ -35,7 +35,7 @@ _compose_response_body(LogProtoHTTPServer *self)
 static gint
 _check_request_headers(LogProtoHTTPServer *self, gchar *buffer_start, gsize buffer_bytes)
 {
-  return 400; // HTTP/1.1 400 Bad Request
+  return HTTP_STATUS_BAD_REQUEST;
 }
 
 static GString *
@@ -47,17 +47,17 @@ _http_request_processor(LogProtoHTTPServer *self, LogProtoBufferedServerState *s
   gint status = self->request_header_checker(self, (gchar *)buffer_start, buffer_bytes);
   switch (status)
     {
-    case 200:
+    case HTTP_STATUS_OK:
       response_data = self->response_body_composer(self);
       break;
 
-    case 429: // HTTP/1.1 429 Too Many Requests
+    case HTTP_STATUS_TOO_MANY_REQUESTS:
       msg_trace("http-server(): Too many requests");
       response_data = g_string_new(http_too_many_request_msg);
       g_string_append(response_data, "\nContent-Length: 0\n\n");
       break;
 
-    case 400: // HTTP/1.1 400 Bad Request
+    case HTTP_STATUS_BAD_REQUEST:
     default:
     {
       GString *header = g_string_new_len((gchar *)buffer_start, buffer_bytes);
