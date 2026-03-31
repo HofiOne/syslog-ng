@@ -23,27 +23,43 @@
 import glob
 import math
 import os
-from time import sleep
+
+from src.common.blocking import wait_until_true
 
 
-def test_logrotate_all_messages_received(config, syslog_ng):
+def test_logrotate_all_messages_received(config, syslog_ng, teardown):
     file_name = "logfile-messages-received.log"
     max_size = 10000
     max_rotations = 5
     epsilon = max_size / 10
 
+    # Register cleanup for log files
+    def cleanup_log_files():
+        for file in glob.glob(file_name + "*"):
+            try:
+                os.remove(file)
+            except OSError:
+                pass
+
+    teardown.register(cleanup_log_files)
+
     message = "message-text"
     msg_per_file = math.floor(max_size / (len(message.encode('utf-8')) + 1))
     counter = msg_per_file * (max_rotations) + math.floor(msg_per_file / 2)
 
+    config.update_global_options(stats_level=1)
     generator_source = config.create_example_msg_generator_source(num=counter, freq=0.0001, template=config.stringify(message))
     file_destination = config.create_file_destination(file_name=file_name, template="\"${MSG}\\n\"", logrotate="enable(yes), rotations(" + str(max_rotations) + "), size(" + str(max_size) + ")")
 
     config.create_logpath(statements=[generator_source, file_destination])
+
+    # Disable verbose logging to avoid shutdown message timeout in CI
+    # (file rotation cleanup can take longer than default 5s timeout)
+    syslog_ng.start_params.verbose = False
     syslog_ng.start(config)
 
-    # wait until all messages have been written
-    sleep(5)
+    # wait until all messages have been processed by polling stats
+    assert wait_until_true(lambda: "processed" in file_destination.get_stats() and file_destination.get_stats()["processed"] == counter)
 
     # verify that all logfiles have been created
     log_file_list = glob.glob(file_name + "*")
