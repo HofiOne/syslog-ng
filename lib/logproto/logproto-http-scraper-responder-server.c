@@ -59,6 +59,28 @@ _generate_batched_response(const gchar *record, gpointer user_data)
   g_string_append_printf(*batch, "%s", record);
 }
 
+static gchar *
+_get_stat_format(LogProtoHTTPScraperResponder *self)
+{
+  gchar *stat_format = self->options->stat_format &&
+                       self->options->stat_format[0] ? self->options->stat_format : "prometheus";
+  return stat_format;
+}
+
+static GString *
+_get_response_content_type(LogProtoHTTPServer *s)
+{
+  LogProtoHTTPScraperResponder *self = (LogProtoHTTPScraperResponder *)s;
+
+  gchar *stat_format = _get_stat_format(self);
+  if (strcmp(stat_format, "prometheus") == 0)
+    return g_string_new("text/plain; version=0.0.4");
+  else if (strcmp(stat_format, "csv") == 0)
+    return g_string_new("text/csv");
+  else
+    return g_string_new("text/plain");
+}
+
 static GString *
 _compose_response_body(LogProtoHTTPServer *s)
 {
@@ -66,8 +88,7 @@ _compose_response_body(LogProtoHTTPServer *s)
 
   GString *stats = NULL;
   gboolean cancelled = FALSE;
-  char *stat_format = self->options->stat_format &&
-                      self->options->stat_format[0] ? self->options->stat_format : "prometheus";
+  gchar *stat_format = _get_stat_format(self);
 
   if (self->options->stat_type == STT_STATS)
     {
@@ -156,6 +177,7 @@ log_proto_http_scraper_responder_server_init(LogProtoHTTPScraperResponder *self,
   log_proto_http_server_init((LogProtoHTTPServer *)self, transport, options_storage);
   self->super.request_header_checker = _check_request_headers;
   self->super.response_body_composer = _compose_response_body;
+  self->super.response_content_type_composer = _get_response_content_type;
 
   self->super.super.super.super.free_fn = _log_proto_http_scraper_responder_server_free;
 

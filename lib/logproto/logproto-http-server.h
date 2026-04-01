@@ -69,6 +69,7 @@ struct _LogProtoHTTPServer
                                        gboolean close_after_sent);
   GString *(*response_body_composer)(LogProtoHTTPServer *self);
   gssize (*response_sender)(LogProtoHTTPServer *self, const gchar *data, gsize data_len, gboolean close_after_sent);
+  GString *(*response_content_type_composer)(LogProtoHTTPServer *self);
 };
 
 void log_proto_http_server_options_defaults(LogProtoServerOptionsStorage *options);
@@ -83,5 +84,4 @@ LogProtoServer *log_proto_http_server_new(LogTransport *transport,
                                           const LogProtoServerOptionsStorage *options);
 void log_proto_http_server_init(LogProtoHTTPServer *self, LogTransport *transport,
                                 const LogProtoServerOptionsStorage *options);
-
 #endif

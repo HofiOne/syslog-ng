@@ -73,22 +73,33 @@ _http_request_processor(LogProtoHTTPServer *self, LogProtoBufferedServerState *s
 }
 
 static GString *
+_get_response_content_type(LogProtoHTTPServer *self)
+{
+  return g_string_new("text/plain; charset=utf-8");
+}
+
+static GString *
 _compose_response_header(LogProtoHTTPServer *self, const gchar *data G_GNUC_UNUSED, gsize data_len,
                          gboolean close_after_sent)
 {
-  const gint maxContentNumLength = 5;
-  static const gchar close_str[] = "Connection: close";
+  static const gchar close_str[] = "Connection: close\n";
+  const gint max_content_num_length = 20; // max number of digits for gsize (64-bit unsigned) in decimal representation
+  const gint data_len_num_length = data_len > 0 ? (gint) (log10((double)data_len) + 1) : 1;
+  const gint max_resp_hdr_len = 150; // calculated based on the parts of a common header
   static const gchar response_header_fmt[] = "%s\n"
-                                             "Content-Type: text/plain; version=0.0.4\n"
+                                             "Content-Type: %s\n"
                                              "Content-Length: %*lu\n"
-                                             "%s\n"
+                                             "%s"
                                              "\n";
-  GString *response = g_string_sized_new(G_N_ELEMENTS(response_header_fmt) - 1 +
-                                         G_N_ELEMENTS(http_ok_msg) - 1 +
-                                         G_N_ELEMENTS(close_str) - 1 - 2 +
-                                         -4 + maxContentNumLength + (long) data_len);
-  g_string_printf(response, response_header_fmt, http_ok_msg, maxContentNumLength, (unsigned long) data_len,
+  GString *response = g_string_sized_new(max_resp_hdr_len);
+  GString *content_type = self->response_content_type_composer(self);
+
+  g_string_printf(response, response_header_fmt,
+                  http_ok_msg,
+                  content_type->str,
+                  MIN(data_len_num_length, max_content_num_length), (unsigned long) data_len,
                   close_after_sent ? close_str : "");
+  g_string_free(content_type, TRUE);
   return response;
 }
 
@@ -140,6 +151,7 @@ log_proto_http_server_init(LogProtoHTTPServer *self, LogTransport *transport,
   self->request_header_checker = _check_request_headers;
   self->response_header_composer = _compose_response_header;
   self->response_body_composer = _compose_response_body;
+  self->response_content_type_composer = _get_response_content_type;
   self->response_sender = _send_response;
 }
 
