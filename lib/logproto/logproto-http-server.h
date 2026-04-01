@@ -68,7 +68,7 @@ struct _LogProtoHTTPServer
   GString *(*response_header_composer)(LogProtoHTTPServer *self, const gchar *data, gsize data_len,
                                        gboolean close_after_sent);
   GString *(*response_body_composer)(LogProtoHTTPServer *self);
-  gssize (*response_sender)(LogProtoHTTPServer *self, const gchar *data, gsize data_len, gboolean close_after_sent);
+  gboolean (*response_sender)(LogProtoHTTPServer *self, const gchar *data, gsize data_len, gboolean close_after_sent);
   GString *(*response_content_type_composer)(LogProtoHTTPServer *self);
 };
 

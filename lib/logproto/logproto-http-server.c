@@ -25,6 +25,8 @@
 #include "messages.h"
 
 #include <unistd.h>
+#include <math.h>
+#include <errno.h>
 
 static GString *
 _compose_response_body(LogProtoHTTPServer *self)
@@ -103,20 +105,102 @@ _compose_response_header(LogProtoHTTPServer *self, const gchar *data G_GNUC_UNUS
   return response;
 }
 
-static gssize
+static gboolean
 _send_response(LogProtoHTTPServer *self, const gchar *data, gsize data_len, gboolean close_after_sent)
 {
+  gboolean result = FALSE;
+  const gsize max_chunk_size = 4096; // 4 KB - reasonable chunk size for writing to the transport
+  const gint max_retries = 100; // Max retries on EAGAIN before giving up
+  gint retry_count = 0;
+
   GString *response = self->response_header_composer(self, data, data_len, close_after_sent);
-  if (response && data && data_len > 0)
-    g_string_append(response, data);
+  g_assert(response != NULL);
 
-  gssize sent_bytes = -1;
-  if (response && response->len)
-    sent_bytes = log_transport_stack_write(&self->super.super.super.transport_stack, response->str, response->len);
+  if (log_transport_stack_write(&self->super.super.super.transport_stack, response->str, response->len) != response->len)
+    {
+      msg_error("http-server(): Failed to send response header",
+                evt_tag_long("header_size", response->len),
+                evt_tag_errno("error", errno));
+      goto exit;
+    }
+  else
+    msg_trace("http-server(): Sent response header", evt_tag_str("response_hdr", response->str));
 
-  if (response)
-    g_string_free(response, TRUE);
-  return sent_bytes;
+  if (data && data_len > 0)
+    {
+      gsize total_to_send = data_len;
+      gsize total_sent = 0;
+
+      while (total_sent < total_to_send && retry_count < max_retries)
+        {
+          gsize chunk_size = MIN(max_chunk_size, total_to_send - total_sent);
+          gssize sent_bytes = log_transport_stack_write(&self->super.super.super.transport_stack,
+                                                        (const gpointer) (data + total_sent),
+                                                        chunk_size);
+          if (sent_bytes < 0)
+            {
+              // Handle non-blocking socket flow control
+              if (errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                  retry_count++;
+                  msg_trace("http-server(): Socket buffer full, backing off",
+                            evt_tag_int("retry_count", retry_count),
+                            evt_tag_long("total_sent", total_sent),
+                            evt_tag_long("total_to_send", total_to_send));
+                  usleep(retry_count * 1000); // retry_count ms backoff
+                  continue;
+                }
+
+              msg_error("http-server(): Failed to send response chunk",
+                        evt_tag_long("total_size", total_to_send),
+                        evt_tag_long("bytes_sent_so_far", total_sent),
+                        evt_tag_long("chunk_size", chunk_size),
+                        evt_tag_long("chunk_bytes_sent", sent_bytes),
+                        evt_tag_errno("error", errno));
+              goto exit;
+            }
+
+          if (sent_bytes == 0)
+            {
+              msg_error("http-server(): Write returned 0, connection closed",
+                        evt_tag_long("total_sent", total_sent),
+                        evt_tag_long("total_to_send", total_to_send));
+              goto exit;
+            }
+
+          // Progress made - reset retry counter
+          retry_count = 0;
+          total_sent += sent_bytes;
+
+          if (sent_bytes < chunk_size)
+            msg_trace("http-server(): Partial chunk write, continuing",
+                      evt_tag_long("chunk_size", chunk_size),
+                      evt_tag_long("chunk_bytes_sent", sent_bytes),
+                      evt_tag_long("total_sent", total_sent),
+                      evt_tag_long("total_to_send", total_to_send));
+        }
+
+      if (total_sent == total_to_send)
+        {
+          msg_debug("http-server(): Response sent successfully",
+                    evt_tag_long("total_bytes", total_sent),
+                    evt_tag_long("num_chunks", (total_sent + max_chunk_size - 1) / max_chunk_size));
+          msg_trace("http-server(): Sent response", evt_tag_strn("response", data, 4096));
+          result = TRUE;
+        }
+      else if (retry_count >= max_retries)
+        msg_error("http-server(): Exceeded maximum retry attempts",
+                  evt_tag_int("max_retries", max_retries),
+                  evt_tag_long("bytes_sent", total_sent),
+                  evt_tag_long("bytes_to_send", total_to_send));
+      else
+        msg_error("http-server(): Incomplete response send",
+                  evt_tag_long("bytes_to_send", total_to_send),
+                  evt_tag_long("bytes_sent", total_sent));
+    }
+exit:
+  g_string_free(response, TRUE);
+  return result;
 }
 
 static gboolean
@@ -130,10 +214,7 @@ _http_request_handler(LogProtoTextServer *s, LogProtoBufferedServerState *state,
   if (response_body)
     {
       if (self->response_sender(self, response_body->str, response_body->len, self->options->super.close_after_send))
-        {
-          msg_trace("http-server(): Sent response", evt_tag_printf("response", "%.1024s", response_body->str));
-          result = TRUE;
-        }
+        result = TRUE;
       g_string_free(response_body, TRUE);
     }
   return result;
