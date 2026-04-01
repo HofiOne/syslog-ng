@@ -259,7 +259,8 @@ success:
     if (FALSE == self->extracted_raw_data_handler(self, state, buffer_start, buffer_bytes))
       {
         *msg_len = 0;
-        return TRUE;
+        self->super.io_status = G_IO_STATUS_ERROR;
+        return FALSE;
       }
 
   if (G_UNLIKELY(self->multi_line && multi_line_logic_keep_trailing_newline(self->multi_line)))
