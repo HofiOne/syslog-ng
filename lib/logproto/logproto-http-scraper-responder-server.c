@@ -81,10 +81,47 @@ _get_response_content_type(LogProtoHTTPServer *s)
     return g_string_new("text/plain");
 }
 
+#define USE_DEBUG_RESPONSE 0
+
+#if USE_DEBUG_RESPONSE
+static GString *
+_compose_debug_response_body(LogProtoHTTPScraperResponder *self)
+{
+  gchar *stat_format = _get_stat_format(self);
+
+  /* Generate test data > 100 MB to test size limit handling */
+  const gsize target_size = 100 * 1024 * 1024;
+  GString *response = g_string_sized_new(target_size);
+
+  for (gsize i = 0; response->len < target_size; i++)
+    if (strcmp(stat_format, "prometheus") == 0)
+      g_string_append_printf(response,
+                             "test_metric_%lu{label=\"value\",instance=\"test\"} 12345678.90 %lu\n",
+                             (unsigned long) i, (unsigned long) i);
+    else if (strcmp(stat_format, "csv") == 0)
+      g_string_append_printf(response,
+                             "src.pipe;debug.metric_%lu;instance;a;value;%lu\n",
+                             (unsigned long) i, (unsigned long) i);
+    else if (strcmp(stat_format, "kv") == 0)
+      g_string_append_printf(response,
+                             "src.pipe.debug.metric_%lu.instance.a.value=%lu\n",
+                             (unsigned long) i, (unsigned long) i);
+
+  msg_debug("http-server(): Generated test response body",
+            evt_tag_long("size", response->len));
+
+  return response;
+}
+#endif
+
 static GString *
 _compose_response_body(LogProtoHTTPServer *s)
 {
   LogProtoHTTPScraperResponder *self = (LogProtoHTTPScraperResponder *)s;
+
+#if USE_DEBUG_RESPONSE
+  return _compose_debug_response_body(self);
+#endif
 
   GString *stats = NULL;
   gboolean cancelled = FALSE;
