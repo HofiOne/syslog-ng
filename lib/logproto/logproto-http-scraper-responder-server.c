@@ -246,7 +246,7 @@ log_proto_http_scraper_responder_options_init(LogProtoServerOptionsStorage *opti
   if (options->stat_type == 0)
     options->stat_type = STT_STATS;
   if (options->scrape_freq_limit == -1)
-    options->scrape_freq_limit = 0;
+    options->scrape_freq_limit = 15;
 }
 
 void
