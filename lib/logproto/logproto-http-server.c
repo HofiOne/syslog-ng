@@ -123,18 +123,19 @@ static gboolean
 _http_request_handler(LogProtoTextServer *s, LogProtoBufferedServerState *state,
                       const guchar *buffer_start, gsize buffer_bytes)
 {
-  gboolean result = FALSE;
   LogProtoHTTPServer *self = (LogProtoHTTPServer *)s;
+  gboolean result = FALSE;
 
-  GString *response = self->request_processor(self, state, buffer_start, buffer_bytes);
-  if (response)
+  GString *response_body = self->request_processor(self, state, buffer_start, buffer_bytes);
+  if (response_body)
     {
-      result = response->len > 0;
-      if (self->response_sender(self, response->str, response->len, self->options->super.close_after_send) >= 0)
-        msg_trace("http-server(): Sent response", evt_tag_str("http-server-response", response->str));
+      if (self->response_sender(self, response_body->str, response_body->len, self->options->super.close_after_send))
+        {
+          msg_trace("http-server(): Sent response", evt_tag_printf("response", "%.1024s", response_body->str));
+          result = TRUE;
+        }
+      g_string_free(response_body, TRUE);
     }
-  if (response)
-    g_string_free(response, TRUE);
   return result;
 }
 
