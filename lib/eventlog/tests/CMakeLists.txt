@@ -10,6 +10,14 @@ add_unit_test(CRITERION TARGET test_evt_tag_mem
   INCLUDES "${Eventlog_INCLUDE_DIR}"
   SOURCES test_evt_tag_mem.c)
 
+add_unit_test(CRITERION TARGET test_evt_tag_strn
+  INCLUDES "${Eventlog_INCLUDE_DIR}"
+  SOURCES test_evt_tag_strn.c)
+
+add_unit_test(CRITERION TARGET test_evt_tag_printf
+  INCLUDES "${Eventlog_INCLUDE_DIR}"
+  SOURCES test_evt_tag_printf.c)
+
 add_unit_test(TARGET test_evtsyslog
   INCLUDES "${Eventlog_INCLUDE_DIR}"
   SOURCES test_evtsyslog.c)

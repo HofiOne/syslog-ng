@@ -81,6 +81,58 @@ evt_tag_str(const char *tag, const char *value)
 }
 
 EVTTAG *
+evt_tag_strn(const char *tag, const char *value, size_t len)
+{
+  EVTTAG *p;
+  size_t value_len;
+  char *clipped_value;
+
+  /* neither tag nor value can be NULL */
+  assert(tag);
+  if (!value)
+    value = "(null)";
+
+  p = (EVTTAG *) malloc(sizeof(EVTTAG));
+  if (p == NULL)
+    return NULL;
+
+  value_len = strlen(value);
+  if (value_len > len) // need to clip the value and add "..." at the end
+    {
+      size_t clipped_len = len;
+      size_t clipped_buf_len = len + 4; /* len visible chars + "..." + '\0' */
+
+      clipped_value = malloc(clipped_buf_len);
+      if (clipped_value == NULL)
+        {
+          free(p);
+          return NULL;
+        }
+
+      if (clipped_len > 0)
+        memcpy(clipped_value, value, clipped_len);
+
+      size_t dots_len = clipped_buf_len - 1;
+
+      if (dots_len > 3)
+        dots_len = 3;
+
+      if (dots_len > 0)
+        {
+          size_t dots_start = clipped_buf_len - 1 - dots_len;
+          memset(clipped_value + dots_start, '.', dots_len);
+        }
+      clipped_value[clipped_buf_len - 1] = '\0';
+    }
+  else
+    clipped_value = strdup(value);
+
+  p->et_tag = strdup(tag);
+  p->et_value = clipped_value;
+  return p;
+}
+
+EVTTAG *
 evt_tag_mem(const char *tag, const void *value, size_t len)
 {
   char *buf = malloc(len + 1);
@@ -128,12 +180,21 @@ evt_tag_errno(const char *tag, int err)
 EVTTAG *
 evt_tag_printf(const char *tag, const char *format, ...)
 {
-  va_list ap;
-  char buf[1024];
+#define MAX_BUF_LEN 1024
+#define FULL_BUF_LEN (MAX_BUF_LEN + 3) /* +3 for possible truncation dots and null terminator */
+  char buf[FULL_BUF_LEN];
 
+  va_list ap;
   va_start(ap, format);
-  vsnprintf(buf, sizeof(buf), format, ap);
+  size_t n = vsnprintf(buf, MAX_BUF_LEN, format, ap);
   va_end(ap);
+  if (n >= MAX_BUF_LEN)
+    {
+      buf[FULL_BUF_LEN - 4] = '.';
+      buf[FULL_BUF_LEN - 3] = '.';
+      buf[FULL_BUF_LEN - 2] = '.';
+      buf[FULL_BUF_LEN - 1] = '\0';
+    }
   return evt_tag_str(tag, buf);
 }
 
