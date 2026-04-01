@@ -8,15 +8,18 @@ add_unit_test(TARGET test_evtfmt
 
 add_unit_test(CRITERION TARGET test_evt_tag_mem
   INCLUDES "${Eventlog_INCLUDE_DIR}"
-  SOURCES test_evt_tag_mem.c)
+  SOURCES test_evt_tag_mem.c
+  DEPENDS eventlog)
 
 add_unit_test(CRITERION TARGET test_evt_tag_strn
   INCLUDES "${Eventlog_INCLUDE_DIR}"
-  SOURCES test_evt_tag_strn.c)
+  SOURCES test_evt_tag_strn.c
+  DEPENDS eventlog)
 
 add_unit_test(CRITERION TARGET test_evt_tag_printf
   INCLUDES "${Eventlog_INCLUDE_DIR}"
-  SOURCES test_evt_tag_printf.c)
+  SOURCES test_evt_tag_printf.c
+  DEPENDS eventlog)
 
 add_unit_test(TARGET test_evtsyslog
   INCLUDES "${Eventlog_INCLUDE_DIR}"

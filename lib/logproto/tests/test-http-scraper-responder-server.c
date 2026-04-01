@@ -60,6 +60,8 @@ get_inited_proto_http_scraper_server_options(void)
   // G=Full teardown of the base options (log_proto_server_options_destroy) will not work either as both
   // log_proto_server_options_init and log_proto_server_options_destroy are called only once, at suit init/teardown
   log_proto_http_scraper_responder_options_init(&proto_server_options, configuration);
+  log_proto_http_scraper_responder_options_set_scrape_freq_limit(&proto_server_options, 0);
+  log_proto_http_scraper_responder_options_set_single_instance(&proto_server_options, FALSE);
   log_proto_http_scraper_responder_options_set_scrape_pattern(&proto_server_options, "GET /metrics*");
   return (LogProtoHTTPScraperResponderOptionsStorage *)&proto_server_options;
 }
@@ -222,7 +224,7 @@ test_scrape_limit(LogTransportMockConstructor log_transport_mock_new)
   response = proto_http_server->request_processor(proto_http_server, NULL,
                                                   (const guchar *)mocked_request,
                                                   sizeof(mocked_request));
-  cr_assert_str_eq((const gchar *) response->str, "HTTP/1.1 429 Too Many Requests\n\n");
+  cr_assert_str_eq((const gchar *) response->str, "HTTP/1.1 429 Too Many Requests\nContent-Length: 0\n\n");
   g_string_free(response, TRUE);
 
   // do not have to wait yet as the fetch result will be the same, no matter if the time is up or not
@@ -276,7 +278,7 @@ test_scrape_pattern(LogTransportMockConstructor log_transport_mock_new)
   GString *response = proto_http_server->request_processor(proto_http_server, NULL,
                                                            (const guchar *)mocked_not_matching_request,
                                                            sizeof(mocked_not_matching_request));
-  cr_assert_str_eq((const gchar *) response->str, "HTTP/1.1 400 Bad Request\n\n");
+  cr_assert_str_eq((const gchar *) response->str, "HTTP/1.1 400 Bad Request\nContent-Length: 0\n\n");
   g_string_free(response, TRUE);
 
   // last fetch should be EOF (as result of the previous is dropped)

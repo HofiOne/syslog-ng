@@ -21,10 +21,13 @@ lib_eventlog_tests_test_evtsyslog_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/lib/even
 lib_eventlog_tests_test_evtsyslog_LDADD = $(top_builddir)/lib/eventlog/src/libevtlog.la
 
 lib_eventlog_tests_test_evt_tag_mem_CFLAGS = $(TEST_CFLAGS)
-lib_eventlog_tests_test_evt_tag_mem_LDADD = $(TEST_LDADD)
+lib_eventlog_tests_test_evt_tag_mem_LDADD = $(TEST_LDADD) $(top_builddir)/lib/eventlog/src/libevtlog.la
+
+lib_eventlog_tests_test_evt_tag_strn_CFLAGS = $(TEST_CFLAGS)
+lib_eventlog_tests_test_evt_tag_strn_LDADD = $(TEST_LDADD) $(top_builddir)/lib/eventlog/src/libevtlog.la
 
 lib_eventlog_tests_test_evt_tag_printf_CFLAGS = $(TEST_CFLAGS)
-lib_eventlog_tests_test_evt_tag_printf_LDADD = $(TEST_LDADD)
+lib_eventlog_tests_test_evt_tag_printf_LDADD = $(TEST_LDADD) $(top_builddir)/lib/eventlog/src/libevtlog.la
 
 lib_eventlog_tests_test_evtsyslog_macros_SOURCES = lib/eventlog/tests/test_evtsyslog.c
 lib_eventlog_tests_test_evtsyslog_macros_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/lib/eventlog/src -DEVENTLOG_SYSLOG_MACROS=1
