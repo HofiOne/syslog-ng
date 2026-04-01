@@ -43,8 +43,8 @@ _http_request_processor(LogProtoHTTPServer *self, LogProtoBufferedServerState *s
                         const guchar *buffer_start, gsize buffer_bytes)
 {
   GString *response_data = NULL;
-  gint status = self->request_header_checker(self, (gchar *)buffer_start, buffer_bytes);
 
+  gint status = self->request_header_checker(self, (gchar *)buffer_start, buffer_bytes);
   switch (status)
     {
     case 200:
@@ -54,7 +54,7 @@ _http_request_processor(LogProtoHTTPServer *self, LogProtoBufferedServerState *s
     case 429: // HTTP/1.1 429 Too Many Requests
       msg_trace("http-server(): Too many requests");
       response_data = g_string_new(http_too_many_request_msg);
-      g_string_append(response_data, "\n\n");
+      g_string_append(response_data, "\nContent-Length: 0\n\n");
       break;
 
     case 400: // HTTP/1.1 400 Bad Request
@@ -64,7 +64,7 @@ _http_request_processor(LogProtoHTTPServer *self, LogProtoBufferedServerState *s
       msg_trace("http-server(): Bad request",
                 evt_tag_str("header", header->str));
       response_data = g_string_new(http_bad_request_msg);
-      g_string_append(response_data, "\n\n");
+      g_string_append(response_data, "\nContent-Length: 0\n\n");
       g_string_free(header, TRUE);
       break;
     }
