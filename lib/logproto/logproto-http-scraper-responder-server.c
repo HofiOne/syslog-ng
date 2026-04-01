@@ -209,6 +209,7 @@ log_proto_http_scraper_responder_options_defaults(LogProtoServerOptionsStorage *
 
   options->stat_type = 0;
   options->scrape_freq_limit = -1;
+  options->single_instance = TRUE;
 }
 
 void
