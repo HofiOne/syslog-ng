@@ -190,25 +190,25 @@
 %token KW_SYSLOG                      10060
 
 /* option items */
-%token KW_MARK_FREQ                   10071
-%token KW_STATS_FREQ                  10072
-%token KW_STATS_LEVEL                 10073
-%token KW_STATS_LIFETIME              10074
-%token KW_FLUSH_LINES                 10075
-%token KW_SUPPRESS                    10076
-%token KW_FLUSH_TIMEOUT               10077
-%token KW_LOG_MSG_SIZE                10078
-%token KW_FILE_TEMPLATE               10079
-%token KW_PROTO_TEMPLATE              10080
-%token KW_MARK_MODE                   10081
-%token KW_ENCODING                    10082
-%token KW_TYPE                        10083
-%token KW_STATS_MAX_DYNAMIC           10084
-%token KW_MIN_IW_SIZE_PER_READER      10085
-%token KW_WORKERS                     10086
+%token KW_MARK_FREQ                   10070
+%token KW_STATS_FREQ                  10071
+%token KW_STATS_LEVEL                 10072
+%token KW_STATS_LIFETIME              10073
+%token KW_FLUSH_LINES                 10074
+%token KW_SUPPRESS                    10075
+%token KW_FLUSH_TIMEOUT               10076
+%token KW_LOG_MSG_SIZE                10077
+%token KW_FILE_TEMPLATE               10078
+%token KW_PROTO_TEMPLATE              10079
+%token KW_MARK_MODE                   10080
+%token KW_ENCODING                    10081
+%token KW_TYPE                        10082
+%token KW_STATS_MAX_DYNAMIC           10083
+%token KW_MIN_IW_SIZE_PER_READER      10084
+%token KW_WORKERS                     10085
+%token KW_WORKER_PARTITION_KEY        10086
 %token KW_BATCH_LINES                 10087
 %token KW_BATCH_TIMEOUT               10088
-%token KW_TRIM_LARGE_MESSAGES         10089
 
 %token KW_STATS                       10400
 %token KW_FREQ                        10401
@@ -217,7 +217,6 @@
 %token KW_MAX_DYNAMIC                 10404
 %token KW_SYSLOG_STATS                10405
 %token KW_HEALTHCHECK_FREQ            10406
-%token KW_WORKER_PARTITION_KEY        10407
 
 %token KW_CHAIN_HOSTNAMES             10090
 %token KW_NORMALIZE_HOSTNAMES         10091
@@ -227,6 +226,7 @@
 %token KW_LOG_LEVEL                   10095
 %token KW_IDLE_TIMEOUT                10096
 %token KW_CHECK_PROGRAM               10097
+%token KW_TRIM_LARGE_MESSAGES         10098
 
 %token KW_KEEP_TIMESTAMP              10100
 
