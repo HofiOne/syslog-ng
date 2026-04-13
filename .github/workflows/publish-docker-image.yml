@@ -109,10 +109,10 @@ jobs:
         id: tags
         run: |
           if [[ '${{ inputs.pkg-type }}' = 'stable' ]]; then
-            if [[ '${{ inputs.pkg-version }}' != '' ]]; then
-              TAGS='${{ steps.stable-tags-versioned.outputs.tags }}'
-            else
+            if [[ '${{ inputs.pkg-version }}' == '' ]]; then
               TAGS='${{ steps.stable-tags.outputs.tags }}'
+            else
+              TAGS='${{ steps.stable-tags-versioned.outputs.tags }}'
             fi
           elif [[ '${{ inputs.pkg-type }}' = 'nightly' ]]; then
             TAGS="${DOCKER_IMAGE_NAME}:nightly"
