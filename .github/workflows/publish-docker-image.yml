@@ -37,9 +37,9 @@ on:
           - nightly
         description: "Package type to publish"
       pkg-version:
-        required: false
+        required: true
         type: string
-        description: "syslog-ng version tag (e.g., 4.5.0), empty for current tag"
+        description: "syslog-ng version tag (e.g., 4.5.0)"
       apt-pkg-version:
         required: false
         type: string
@@ -53,7 +53,7 @@ on:
         required: true
         type: boolean
         default: false
-        description: "Push to Docker Hub (use false for testing)"
+        description: "Push to Docker Hub (uncheck (use false) for testing)"
 
 env:
   DOCKER_IMAGE_NAME: balabit/syslog-ng
