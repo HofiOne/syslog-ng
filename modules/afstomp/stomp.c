@@ -79,9 +79,11 @@ stomp_frame_set_body(stomp_frame *frame, const char *body, int body_len)
 int
 stomp_frame_deinit(stomp_frame *frame)
 {
-  g_hash_table_destroy(frame->headers);
+  if (frame->headers)
+    g_hash_table_destroy(frame->headers);
   g_free(frame->command);
   g_free(frame->body);
+  memset(frame, 0, sizeof(stomp_frame));
 
   return TRUE;
 }
@@ -204,11 +206,12 @@ stomp_read_data(stomp_connection *connection, GString *buffer)
 static int
 stomp_parse_command(char *buffer, int buflen, stomp_frame *frame, char **out_pos)
 {
-  char *pos;
-
-  pos = g_strstr_len(buffer, buflen, "\n");
+  char *pos = g_strstr_len(buffer, buflen, "\n");
   if (pos == NULL)
-    return STOMP_PARSE_ERROR;
+    {
+      memset(frame, 0, sizeof(stomp_frame));
+      return STOMP_PARSE_ERROR;
+    }
 
   stomp_frame_init(frame, buffer, pos - buffer);
   *out_pos = pos + 1;
@@ -255,7 +258,7 @@ stomp_parse_frame(GString *data, stomp_frame *frame)
   int res;
 
   res = stomp_parse_command(data->str, data->len, frame, &pos);
-  if (!res)
+  if (res == STOMP_PARSE_ERROR)
     return FALSE;
 
   res = stomp_parse_header(pos, data->str + data->len - pos, frame, &pos);
@@ -278,13 +281,16 @@ stomp_receive_frame(stomp_connection *connection, stomp_frame *frame)
 
   if (!stomp_read_data(connection, data))
     {
+      memset(frame, 0, sizeof(stomp_frame));
       g_string_free(data, TRUE);
       return FALSE;
     }
 
   int res = stomp_parse_frame(data, frame);
 
-  if (res)
+  if (res == STOMP_PARSE_ERROR)
+    msg_error("Error parsing frame received from stomp server");
+  else
     msg_debug("Frame received", evt_tag_str("command", frame->command));
 
   g_string_free(data, TRUE);
@@ -305,7 +311,10 @@ stomp_check_for_frame(stomp_connection *connection)
       stomp_frame frame;
 
       if (!stomp_receive_frame(connection, &frame))
-        return FALSE;
+        {
+          stomp_frame_deinit(&frame);
+          return FALSE;
+        }
       if (!strcmp(frame.command, "ERROR"))
         {
           msg_error("ERROR frame received from stomp_server");

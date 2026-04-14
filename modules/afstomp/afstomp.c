@@ -280,7 +280,6 @@ afstomp_worker_publish(STOMPDestDriver *self, LogMessage *msg)
   gboolean success = TRUE;
   GString *body = NULL;
   stomp_frame frame;
-  stomp_frame recv_frame;
 
   if (!self->conn)
     {
@@ -319,8 +318,11 @@ afstomp_worker_publish(STOMPDestDriver *self, LogMessage *msg)
     }
 
   if (success && self->ack_needed)
-    success = stomp_receive_frame(self->conn, &recv_frame);
-
+    {
+      stomp_frame recv_frame;
+      success = stomp_receive_frame(self->conn, &recv_frame);
+      stomp_frame_deinit(&recv_frame);
+    }
   return success;
 }
 
