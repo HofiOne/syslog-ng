@@ -196,12 +196,13 @@ log_queue_fifo_drop_messages_from_input_queue(LogQueueFifo *self, InputQueue *in
       iv_list_del(&node->list);
       input_queue->len--;
       log_queue_dropped_messages_inc(&self->super);
-      log_msg_free_queue_node(node);
-
-      LogMessage *msg = node->msg;
 
       input_queue->non_flow_controlled_len--;
+
+      LogMessage *msg = node->msg;
       log_msg_drop(msg, &path_options, AT_PROCESSED);
+
+      log_msg_free_queue_node(node);
 
       dropped++;
     }
