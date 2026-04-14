@@ -118,7 +118,7 @@ _check_request_headers(LogProtoHTTPServer *s, gchar *buffer_start, gsize buffer_
   if (status != 200)
     {
       msg_trace("Too frequent scraper requests, ignoring for now",
-                evt_tag_int("last-request", ellapsed),
+                evt_tag_long("last-request", ellapsed),
                 evt_tag_int("allowed-freq", self->options->scrape_freq_limit));
       return status;
     }

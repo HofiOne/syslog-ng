@@ -469,7 +469,7 @@ http_dd_init(LogPipe *s)
 
   log_template_options_init(&self->template_options, cfg);
 
-  http_load_balancer_set_recovery_timeout(self->load_balancer, self->super.time_reopen);
+  http_load_balancer_set_recovery_timeout(self->load_balancer, (gint) self->super.time_reopen);
 
   log_threaded_dest_driver_register_aggregated_stats(&self->super);
   return TRUE;

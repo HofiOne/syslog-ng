@@ -165,7 +165,7 @@ afuser_dd_queue(LogPipe *s, LogMessage *msg, const LogPathOptions *path_options)
               msg_error("Opening tty device failed, disabling usertty() for time-reopen seconds",
                         _evt_tag_utmp_username(ut),
                         evt_tag_str("line", line),
-                        evt_tag_int("time_reopen", self->time_reopen),
+                        evt_tag_long("time_reopen", self->time_reopen),
                         evt_tag_error("errno"));
               self->disable_until = now + self->time_reopen;
               continue;
