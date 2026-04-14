@@ -471,9 +471,7 @@ zone_info_get_offset(ZoneInfo *self, gint64 timestamp)
 static gboolean
 zone_info_read(const gchar *zonename, ZoneInfo **zone, ZoneInfo **zone64)
 {
-  unsigned char *buff = NULL;
   gchar *filename = NULL;
-  int byte_read = 0;
   int version;
   GError *error = NULL;
   GMappedFile *file_map = NULL;
@@ -493,9 +491,7 @@ zone_info_read(const gchar *zonename, ZoneInfo **zone, ZoneInfo **zone64)
       return FALSE;
     }
 
-  byte_read = g_mapped_file_get_length(file_map);
-  buff = (unsigned char *)g_mapped_file_get_contents(file_map);
-
+  int byte_read = g_mapped_file_get_length(file_map);
   if (byte_read == -1)
     {
       msg_error("Failed to read the time zone file", evt_tag_str("filename", filename));
@@ -505,6 +501,7 @@ zone_info_read(const gchar *zonename, ZoneInfo **zone, ZoneInfo **zone64)
     }
 
   msg_debug("Processing the time zone file (32bit part)", evt_tag_str("filename", filename));
+  unsigned char *buff = (unsigned char *)g_mapped_file_get_contents(file_map);
   *zone = zone_info_parser(&buff, FALSE, &version);
   if (version == 2)
     {
