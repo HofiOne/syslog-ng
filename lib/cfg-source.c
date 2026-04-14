@@ -113,11 +113,11 @@ _report_file_location(const gchar *filename, const CFG_LTYPE *yylloc)
             error_index = context->len;
           g_ptr_array_add(context, g_strdup(buf));
         }
+      fclose(f);
       /* NOTE: do we have the appropriate number of lines? */
       if (lineno <= yylloc->first_line)
         goto exit;
       g_ptr_array_add(context, NULL);
-      fclose(f);
     }
   if (context->len > 0)
     _print_underlined_source_block(yylloc, (gchar **) context->pdata, error_index);
@@ -173,7 +173,6 @@ _extract_source_from_file_location(GString *result, const gchar *filename, const
   FILE *f;
   gint lineno = 0;
   gint buflen = 65520;
-  gchar *line = g_malloc(buflen);
 
   if (yylloc->first_column < 1 || yylloc->last_column < 1 ||
       yylloc->first_column > buflen - 1 || yylloc->last_column > buflen - 1)
@@ -183,6 +182,7 @@ _extract_source_from_file_location(GString *result, const gchar *filename, const
   if (!f)
     return FALSE;
 
+  gchar *line = g_malloc(buflen);
   while (fgets(line, buflen, f))
     {
       lineno++;
@@ -216,12 +216,11 @@ _extract_source_from_file_location(GString *result, const gchar *filename, const
         }
     }
   fclose(f);
+  g_free(line);
 
   /* NOTE: do we have the appropriate number of lines? */
   if (lineno <= yylloc->first_line)
     return FALSE;
-
-  g_free(line);
   return TRUE;
 }
 
