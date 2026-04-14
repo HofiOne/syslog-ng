@@ -74,7 +74,7 @@ evtrec_add_standard_tags(EVTREC *e, void *userptr)
       evt_rec_add_tag(e, evt_tag_str(EVT_TAG_ISOSTAMP, buf));
     }
   if (ctx->ec_flags & EF_ADD_UTCSTAMP)
-    evt_rec_add_tag(e, evt_tag_int(EVT_TAG_UTCSTAMP, (int) now));
+    evt_rec_add_tag(e, evt_tag_long(EVT_TAG_UTCSTAMP, (long) now));
   if (ctx->ec_flags & EF_ADD_TIMEZONE)
     {
       if (!tm)
