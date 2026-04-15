@@ -584,6 +584,7 @@ ptz_load_file(Patternizer *self, gchar *input_file, gboolean no_parse, GError **
   MsgFormatOptions parse_options;
   gchar line[PTZ_MAXLINELEN];
   LogMessage *msg;
+  gboolean should_close_file = FALSE;
 
   if (!input_file)
     {
@@ -598,6 +599,7 @@ ptz_load_file(Patternizer *self, gchar *input_file, gboolean no_parse, GError **
           g_set_error(error, G_FILE_ERROR, G_FILE_ERROR_IO, "Error opening input file %s", input_file);
           return FALSE;
         }
+      should_close_file = TRUE;
     }
   else
     {
@@ -624,6 +626,10 @@ ptz_load_file(Patternizer *self, gchar *input_file, gboolean no_parse, GError **
 
   self->support = (guint)(self->logs->len * (self->support_treshold / 100.0));
   msg_format_options_destroy(&parse_options);
+
+  if (should_close_file)
+    fclose(file);
+
   return TRUE;
 }
 
