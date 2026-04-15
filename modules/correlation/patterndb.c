@@ -173,22 +173,19 @@ _flush_emitted_messages(PatternDB *self, PDBProcessParams *process_params)
 static gboolean
 _is_action_within_rate_limit(PatternDB *db, PDBProcessParams *process_params)
 {
-  PDBRule *rule = process_params->rule;
   PDBAction *action = process_params->action;
-  LogMessage *msg = process_params->msg;
-  GString *buffer = g_string_sized_new(256);
-
-  CorrelationKey key;
-  PDBRateLimit *rl;
-  guint64 now;
-
   if (action->rate == 0)
     return TRUE;
 
+  GString *buffer = g_string_sized_new(256);
+  PDBRule *rule = process_params->rule;
   g_string_printf(buffer, "%s:%d", rule->rule_id, action->id);
+
+  LogMessage *msg = process_params->msg;
+  CorrelationKey key;
   correlation_key_init(&key, rule->context.scope, msg, buffer->str);
 
-  rl = g_hash_table_lookup(db->rate_limits, &key);
+  PDBRateLimit *rl = g_hash_table_lookup(db->rate_limits, &key);
   if (!rl)
     {
       rl = pdb_rate_limit_new(&key);
@@ -200,7 +197,7 @@ _is_action_within_rate_limit(PatternDB *db, PDBProcessParams *process_params)
       g_string_free(buffer, TRUE);
     }
 
-  now = correlation_state_get_time(db->correlation);
+  guint64 now = correlation_state_get_time(db->correlation);
   if (rl->last_check == 0)
     {
       rl->last_check = now;
