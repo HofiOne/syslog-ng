@@ -414,32 +414,51 @@ _padding_prepare_parse_state(TFStringPaddingState *state, gint argc, gchar **arg
                   "Padding template function requires a number as second argument!");
       return FALSE;
     }
+
+  if (state->width == 0)
+    {
+      g_set_error(error, LOG_TEMPLATE_ERROR, LOG_TEMPLATE_ERROR_COMPILE,
+                  "$(padding) width cannot be zero");
+      return FALSE;
+    }
+
+  /* Use absolute value for size validation to support negative widths (right-padding)
+   * GLib requires num <= G_MAXSIZE / 2, so we must reject values >= G_MAXSIZE / 2
+   */
+  if (llabs(state->width) >= G_MAXSIZE / 2)
+    {
+      g_set_error(error, LOG_TEMPLATE_ERROR, LOG_TEMPLATE_ERROR_COMPILE,
+                  "$(padding) width is too large: %" G_GINT64_FORMAT, state->width);
+      return FALSE;
+    }
+
   return TRUE;
 }
 
 static void
 _padding_prepare_fill_padding_pattern(TFStringPaddingState *state, gint argc, gchar **argv)
 {
-  state->padding_pattern = g_string_sized_new(state->width);
+  gint64 abs_width = llabs(state->width);
+  state->padding_pattern = g_string_sized_new(abs_width);
   if (argc < 4)
     {
-      g_string_printf(state->padding_pattern, "%*s", (int)(state->width), "");
+      g_string_printf(state->padding_pattern, "%*s", (int)(abs_width), "");
     }
   else
     {
       gint len = strlen(argv[3]);
       if (len < 1)
         {
-          g_string_printf(state->padding_pattern, "%*s", (int)(state->width), "");
+          g_string_printf(state->padding_pattern, "%*s", (int)(abs_width), "");
         }
       else
         {
-          gint repeat = state->width / len; // integer division!
+          gint repeat = abs_width / len; // integer division!
           for (gint i = 0; i < repeat; i++)
             {
               g_string_append_len(state->padding_pattern, argv[3], len);
             }
-          g_string_append_len(state->padding_pattern, argv[3], state->width - (repeat * len));
+          g_string_append_len(state->padding_pattern, argv[3], abs_width - (repeat * len));
         }
     }
 }
@@ -470,15 +489,22 @@ tf_string_padding_call(LogTemplateFunction *self, gpointer s, const LogTemplateI
                        LogMessageValueType *type)
 {
   TFStringPaddingState *state = (TFStringPaddingState *) s;
+  gint64 abs_width = llabs(state->width);
 
   *type = LM_VT_STRING;
-  if (args->argv[0]->len > state->width)
+
+  if (state->width < 0)
     {
+      /* Right-padding: string comes first, then padding */
       g_string_append_len(result, args->argv[0]->str, args->argv[0]->len);
+      if (args->argv[0]->len < abs_width)
+        g_string_append_len(result, state->padding_pattern->str, abs_width - args->argv[0]->len);
     }
   else
     {
-      g_string_append_len(result, state->padding_pattern->str, state->width - args->argv[0]->len);
+      /* Left-padding: padding comes first, then string */
+      if (args->argv[0]->len < abs_width)
+        g_string_append_len(result, state->padding_pattern->str, abs_width - args->argv[0]->len);
       g_string_append_len(result, args->argv[0]->str, args->argv[0]->len);
     }
 }

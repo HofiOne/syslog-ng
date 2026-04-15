@@ -231,6 +231,17 @@ Test(basicfuncs, test_str_funcs)
 
   assert_template_format("$(replace-delimiter \"\t\" \",\" \"hello\tworld\")", "hello,world");
 
+  /* echo - concatenates arguments with space separator */
+  assert_template_format("$(echo)", "");
+  assert_template_format("$(echo test)", "test");
+  assert_template_format("$(echo test value)", "test value");
+  assert_template_format("$(echo foo bar baz)", "foo bar baz");
+  assert_template_format("$(echo $HOST)", "bzorp");
+  assert_template_format("$(echo $HOST $PROGRAM)", "bzorp syslog-ng");
+  assert_template_format("$(echo 'hello world')", "hello world");
+  assert_template_format("$(echo one two three)", "one two three");
+
+  /* padding - positive width = left-padding */
   assert_template_format("$(padding foo 10)", "       foo");
   assert_template_format("$(padding foo 10 x)", "xxxxxxxfoo");
   assert_template_format("$(padding foo 10 abc)", "abcabcafoo");
@@ -238,6 +249,21 @@ Test(basicfuncs, test_str_funcs)
   assert_template_format("$(padding foo 3)", "foo");        // len(macro) == padding length
   assert_template_format("$(padding foo 6 abc)", "abcfoo"); // len(padding string) == padding length
   assert_template_format("$(padding foo 4 '')", " foo");    // padding string == ''
+
+  /* padding - negative width = right-padding */
+  assert_template_format("$(padding foo -10)", "foo       ");
+  assert_template_format("$(padding foo -10 x)", "fooxxxxxxx");
+  assert_template_format("$(padding foo -10 abc)", "fooabcabca");
+  assert_template_format("$(padding 42 -5)", "42   ");
+  assert_template_format("$(padding 42 -5 0)", "42000");
+  assert_template_format("$(padding bar -2)", "bar");      // longer than padding width
+  assert_template_format("$(padding bar -3)", "bar");      // equals padding width
+
+  /* padding - boundary validation tests */
+  assert_template_failure("$(padding foo 0)", "width cannot be zero");
+  assert_template_failure("$(padding foo -0)", "width cannot be zero");
+  assert_template_failure("$(padding foo 9223372036854775807)", "width is too large");
+  assert_template_failure("$(padding foo -9223372036854775807)", "width is too large");
 
   assert_template_failure("$(binary)", "Incorrect parameters");
   assert_template_failure("$(binary abc)", "unable to parse abc");
@@ -407,6 +433,7 @@ Test(basicfuncs, test_tf_template)
 
 Test(basicfuncs, test_list_funcs)
 {
+  /* list-concat - concatenates multiple lists or values into a single list */
   assert_template_format("$(list-concat)", "");
   assert_template_format("$(list-concat foo bar baz)", "foo,bar,baz");
   assert_template_format("$(list-concat foo bar baz '')", "foo,bar,baz");
@@ -414,7 +441,10 @@ Test(basicfuncs, test_list_funcs)
   assert_template_format("$(list-concat foo $HOST,$PROGRAM,$PID bar)", "foo,bzorp,syslog-ng,23323,bar");
   assert_template_format("$(list-concat foo '$HOST,$PROGRAM,$PID' bar)", "foo,bzorp,syslog-ng,23323,bar");
   assert_template_format("$(list-concat foo '$HOST,$PROGRAM,$PID,' bar)", "foo,bzorp,syslog-ng,23323,bar");
+  assert_template_format("$(list-concat apple,banana,cherry one,two,three)", "apple,banana,cherry,one,two,three");
+  assert_template_format("$(list-concat a,b,c d,e,f g,h,i)", "a,b,c,d,e,f,g,h,i");
 
+  /* list-append - appends values to an existing list */
   assert_template_format("$(list-append)", "");
   assert_template_format("$(list-append '' foo)", "foo");
   assert_template_format("$(list-append '' foo bar)", "foo,bar");
@@ -423,7 +453,11 @@ Test(basicfuncs, test_list_funcs)
   assert_template_format("$(list-append foo,bar,baz '')", "foo,bar,baz,\"\"");
   assert_template_format("$(list-append foo,bar,baz 'xxx,')", "foo,bar,baz,\"xxx,\"");
   assert_template_format("$(list-append foo,bar,baz 'a\tb')", "foo,bar,baz,\"a\\tb\"");
+  assert_template_format("$(list-append apple,banana,cherry fig grape)", "apple,banana,cherry,fig,grape");
+  assert_template_format("$(list-append first second third)", "first,second,third");
+  assert_template_format("$(list-append first second third)", "first,second,third");
 
+  /* list-head - returns the first element of a list */
   assert_template_format("$(list-head)", "");
   assert_template_format("$(list-head '')", "");
   assert_template_format("$(list-head foo)", "foo");
@@ -438,6 +472,7 @@ Test(basicfuncs, test_list_funcs)
 
   assert_template_format("$(list-head '\"\\tfoo,\",bar,baz')", "\tfoo,");
 
+  /* list-nth - returns element at specified index (supports negative indices) */
   assert_template_format("$(list-nth 0 '\"foo,\",\"bar\",\"baz\"')", "foo,");
   assert_template_format("$(list-nth 1 '\"foo,\",\"bar\",\"baz\"')", "bar");
   assert_template_format("$(list-nth 2 '\"foo,\",\"bar\",\"baz\"')", "baz");
@@ -447,7 +482,13 @@ Test(basicfuncs, test_list_funcs)
   assert_template_format("$(list-nth -2 '\"foo,\",\"bar\",\"baz\"')", "bar");
   assert_template_format("$(list-nth -3 '\"foo,\",\"bar\",\"baz\"')", "foo,");
   assert_template_format("$(list-nth -4 '\"foo,\",\"bar\",\"baz\"')", "");
+  assert_template_format("$(list-nth 0 apple,banana,cherry,date,elderberry)", "apple");
+  assert_template_format("$(list-nth 2 apple,banana,cherry,date,elderberry)", "cherry");
+  assert_template_format("$(list-nth 5 apple,banana,cherry,date,elderberry)", "");
+  assert_template_format("$(list-nth -1 apple,banana,cherry,date,elderberry)", "elderberry");
+  assert_template_format("$(list-nth -5 apple,banana,cherry,date,elderberry)", "apple");
 
+  /* list-tail - returns all elements except the first */
   assert_template_format("$(list-tail)", "");
   assert_template_format("$(list-tail foo)", "");
   assert_template_format("$(list-tail foo,bar)", "bar");
@@ -458,6 +499,7 @@ Test(basicfuncs, test_list_funcs)
   assert_template_format("$(list-tail foo,bar baz bad)", "bar,baz,bad");
   assert_template_format("$(list-tail foo,bar,xxx, baz bad)", "bar,xxx,baz,bad");
 
+  /* list-slice - extracts a sublist using Python-like slice notation */
   assert_template_format("$(list-slice 0:0 foo,bar,xxx,baz,bad)", "");
   assert_template_format("$(list-slice 0:1 foo,bar,xxx,baz,bad)", "foo");
   assert_template_format("$(list-slice 0:2 foo,bar,xxx,baz,bad)", "foo,bar");
@@ -487,16 +529,28 @@ Test(basicfuncs, test_list_funcs)
   assert_template_format("$(list-slice :-5 foo,bar,xxx,baz,bad)", "");
   assert_template_format("$(list-slice :-6 foo,bar,xxx,baz,bad)", "");
 
+  /* list-count */
   assert_template_format("$(list-count foo,bar,xxx, baz bad)", "5");
+  assert_template_format("$(list-count '')", "0");
+  assert_template_format("$(list-count a)", "1");
+  assert_template_format("$(list-count a,b,c,d,e,f,g,h,i,j)", "10");
 
+  /* explode - splits string by delimiter into a list */
   assert_template_format("$(explode ' ' foo bar xxx baz bad)", "foo,bar,xxx,baz,bad");
   assert_template_format("$(explode ' ' 'foo bar xxx baz bad')", "foo,bar,xxx,baz,bad");
   assert_template_format("$(explode ';' foo;bar;xxx;baz;bad)", "foo,bar,xxx,baz,bad");
   assert_template_format("$(explode ';' foo;bar xxx;baz;bad)", "foo,bar,xxx,baz,bad");
+  assert_template_format("$(explode ',' a,b,c)", "a,b,c");
+  assert_template_format("$(explode ':' one:two:three)", "one,two,three");
+  assert_template_format("$(explode ' ' '')", "");
 
-  assert_template_format("$(implode ' ' foo,bar,xxx,baz,bad)", "foo bar xxx baz bad");
+  /* implode - joins list elements with separator */
   assert_template_format("$(implode ' ' $(list-slice :3 foo,bar,xxx,baz,bad))", "foo bar xxx");
+  assert_template_format("$(implode ' | ' one,two,three)", "one | two | three");
+  assert_template_format("$(implode '' a,b,c)", "abc");
+  assert_template_format("$(implode ',' '')", "");
 
+  /* list-search */
   assert_template_format("$(list-search almafa '')", "");
   assert_template_format("$(list-search 'foo,' '\"foo,\",\"bar\",\"baz\",\"bar\"')", "0");
   assert_template_format("$(list-search --start-index 0 --mode literal bar '\"foo,\",\"bar\",\"baz\",\"bar\"')", "1");
