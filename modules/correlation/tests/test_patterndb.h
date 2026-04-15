@@ -583,4 +583,37 @@
 </ruleset>\
 </patterndb>"
 
+#define pdb_test_value_with_type "\
+<patterndb version='6' pub_date='2010-02-22'>\
+ <ruleset name='testset' id='1'>\
+  <patterns>\
+    <pattern>prog1</pattern>\
+  </patterns>\
+  <rules>\
+    <rule provider='test' id='11' class='system'>\
+     <patterns>\
+      <pattern>test typed values: @NUMBER:count@ @ESTRING:message: @@ESTRING:level:@</pattern>\
+     </patterns>\
+     <examples>\
+       <example>\
+         <test_message program='prog1'>test typed values: 42 hello world</test_message>\
+         <test_values>\
+            <test_value name='count' type='integer'>42</test_value>\
+            <test_value name='message' type='string'>hello</test_value>\
+            <test_value name='level'>world</test_value>\
+         </test_values>\
+       </example>\
+       <example>\
+         <test_message program='prog1'>test typed values: 123 foo bar</test_message>\
+         <test_values>\
+            <test_value name='count' type='integer'>123</test_value>\
+            <test_value name='message' type='string'>foo</test_value>\
+         </test_values>\
+       </example>\
+     </examples>\
+    </rule>\
+  </rules>\
+ </ruleset>\
+</patterndb>"
+
 #endif

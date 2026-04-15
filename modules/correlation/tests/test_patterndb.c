@@ -794,6 +794,23 @@ Test(pattern_db, test_program_template)
   log_template_unref(template);
 }
 
+Test(pattern_db, test_value_with_type_attribute)
+{
+  gchar *filename;
+  PatternDB *patterndb = _create_pattern_db(pdb_test_value_with_type, &filename);
+
+  /* Test that typed test values are loaded and memory is properly managed */
+  assert_msg_matches_and_nvpair_equals(patterndb, "test typed values: 42 hello world",
+                                       "count", "42");
+  assert_msg_matches_and_nvpair_equals(patterndb, "test typed values: 42 hello world",
+                                       "message", "hello");
+  assert_msg_matches_and_nvpair_equals(patterndb, "test typed values: 42 hello world",
+                                       "level", "world");
+
+  _destroy_pattern_db(patterndb, filename);
+  g_free(filename);
+}
+
 void setup(void)
 {
   app_startup();

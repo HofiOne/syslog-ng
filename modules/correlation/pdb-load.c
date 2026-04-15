@@ -105,13 +105,96 @@ typedef struct _PDBProgramPattern
 } PDBProgramPattern;
 
 static void
-pdb_program_pattern_clear(PDBProgramPattern *self)
+_pdb_program_pattern_clear(PDBProgramPattern *self)
 {
   pdb_rule_unref(self->rule);
   g_free(self->pattern);
   g_free(self->pdb_location);
+  memset(self, 0, sizeof(*self));
 }
 
+/*
+ * Clean up all dynamically allocated resources in PDBLoader state.
+ * Safe to call multiple times or on partially initialized state.
+ */
+static void
+_pdb_loader_cleanup(PDBLoader *state)
+{
+  /* Clean up program_patterns array and its contents */
+  if (state->program_patterns)
+    {
+      for (gint i = 0; i < state->program_patterns->len; i++)
+        {
+          PDBProgramPattern *program_pattern = &g_array_index(state->program_patterns, PDBProgramPattern, i);
+          _pdb_program_pattern_clear(program_pattern);
+        }
+      g_array_free(state->program_patterns, TRUE);
+      state->program_patterns = NULL;
+    }
+
+  /* Clean up partially parsed structures */
+  if (state->current_rule)
+    {
+      pdb_rule_unref(state->current_rule);
+      state->current_rule = NULL;
+    }
+
+  if (state->current_action)
+    {
+      pdb_action_free(state->current_action);
+      state->current_action = NULL;
+    }
+
+  if (state->current_example)
+    {
+      pdb_example_free(state->current_example);
+      state->current_example = NULL;
+    }
+
+  /* Clean up accumulated examples list */
+  if (state->examples)
+    {
+      g_list_foreach(state->examples, (GFunc) pdb_example_free, NULL);
+      g_list_free(state->examples);
+      state->examples = NULL;
+    }
+
+  /* Clean up temporary parsing strings - g_free() is safe for NULL */
+  g_free(state->value_name);
+  state->value_name = NULL;
+
+  g_free(state->value_type);
+  state->value_type = NULL;
+
+  g_free(state->test_value_name);
+  state->test_value_name = NULL;
+
+  g_free(state->test_value_type);
+  state->test_value_type = NULL;
+
+  /* Clean up markup parser context */
+  if (state->context)
+    {
+      g_markup_parse_context_free(state->context);
+      state->context = NULL;
+    }
+
+  /* Clean up pattern hash table */
+  if (state->ruleset_patterns)
+    {
+      g_hash_table_unref(state->ruleset_patterns);
+      state->ruleset_patterns = NULL;
+    }
+
+  /* Note: The following are NOT cleaned up here:
+   * - state->ruleset: pointer to caller's PDBRuleSet
+   * - state->cfg: pointer to caller's GlobalConfig
+   * - state->filename: pointer to caller-provided string
+   * - state->root_program: not owned by loader, managed by caller
+   * - state->current_program: pointer into ruleset_patterns hash table, not owned
+   * - state->current_message: pointer to rule/action message, not owned
+   */
+}
 
 static void
 _pdb_state_stack_push(PDBStateStack *self, gint state)
@@ -453,7 +536,7 @@ _pdbl_ruleset_end(PDBLoader *state, const gchar *element_name, GError **error)
                         state->ruleset->prefix,
                         (RNodeGetValueFunc) pdb_rule_get_name,
                         program_pattern->pdb_location);
-          pdb_program_pattern_clear(program_pattern);
+          _pdb_program_pattern_clear(program_pattern);
         }
 
       state->current_program = NULL;
@@ -776,7 +859,7 @@ _pdbl_rule_example_test_value_text(PDBLoader *state, const gchar *text, gsize te
   nv = g_new(gchar *, 4);
   nv[0] = state->test_value_name;
   nv[1] = g_strdup(text);
-  nv[2] = g_strdup(state->test_value_type);
+  nv[2] = state->test_value_type;
   nv[3] = NULL;
   state->test_value_name = NULL;
   state->test_value_type = NULL;
@@ -1178,14 +1261,7 @@ GMarkupParser db_parser =
 gboolean
 pdb_rule_set_load(PDBRuleSet *self, GlobalConfig *cfg, const gchar *config, GList **examples)
 {
-  PDBLoader state;
-  GMarkupParseContext *parse_ctx = NULL;
-  GError *error = NULL;
   FILE *dbfile = NULL;
-  gint bytes_read;
-  gchar buff[4096];
-  gboolean success = FALSE;
-
   if ((dbfile = fopen(config, "r")) == NULL)
     {
       msg_error("Error opening classifier configuration file",
@@ -1194,21 +1270,26 @@ pdb_rule_set_load(PDBRuleSet *self, GlobalConfig *cfg, const gchar *config, GLis
       return FALSE;
     }
 
-  memset(&state, 0x0, sizeof(state));
+  gboolean success = FALSE;
 
+  self->programs = r_new_node("", pdb_program_new());
+
+  PDBLoader state;
+  memset(&state, 0x0, sizeof(state));
   state.ruleset = self;
-  state.root_program = pdb_program_new();
-  state.load_examples = !!examples;
-  state.ruleset_patterns = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify) pdb_program_unref);
   state.cfg = cfg;
   state.filename = config;
-  state.context = parse_ctx = g_markup_parse_context_new(&db_parser, 0, &state, NULL);
+  state.root_program = self->programs->value;
+  state.load_examples = !!examples;
+  state.ruleset_patterns = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify) pdb_program_unref);
+  state.context = g_markup_parse_context_new(&db_parser, 0, &state, NULL);
 
-  self->programs = r_new_node("", state.root_program);
-
+  GError *error = NULL;
+  gint bytes_read;
+  gchar buff[4096];
   while ((bytes_read = fread(buff, sizeof(gchar), 4096, dbfile)) != 0)
     {
-      if (!g_markup_parse_context_parse(parse_ctx, buff, bytes_read, &error))
+      if (!g_markup_parse_context_parse(state.context, buff, bytes_read, &error))
         {
           msg_error("Error parsing pattern database file",
                     evt_tag_str(EVT_TAG_FILENAME, config),
@@ -1216,10 +1297,8 @@ pdb_rule_set_load(PDBRuleSet *self, GlobalConfig *cfg, const gchar *config, GLis
           goto error;
         }
     }
-  fclose(dbfile);
-  dbfile = NULL;
 
-  if (!g_markup_parse_context_end_parse(parse_ctx, &error))
+  if (!g_markup_parse_context_end_parse(state.context, &error))
     {
       msg_error("Error parsing pattern database file",
                 evt_tag_str(EVT_TAG_FILENAME, config),
@@ -1233,12 +1312,13 @@ pdb_rule_set_load(PDBRuleSet *self, GlobalConfig *cfg, const gchar *config, GLis
   success = TRUE;
 
 error:
+  _pdb_loader_cleanup(&state);
+
   if (dbfile)
     fclose(dbfile);
-  if (parse_ctx)
-    g_markup_parse_context_free(parse_ctx);
-  g_hash_table_unref(state.ruleset_patterns);
+
   if (error)
     g_error_free(error);
+
   return success;
 }
