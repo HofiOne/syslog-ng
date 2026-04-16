@@ -273,6 +273,7 @@ open_ssl_connection(int sock_fd)
   if (NULL == (ssl = SSL_new(ctx)))
     {
       ERROR("error creating SSL\n");
+      SSL_CTX_free(ctx);
       return NULL;
     }
 
@@ -281,6 +282,8 @@ open_ssl_connection(int sock_fd)
     {
       ERROR("SSL connect failed\n");
       ERR_print_errors_fp(stderr);
+      SSL_CTX_free(ctx);
+      SSL_free(ssl);
       return NULL;
     }
 
