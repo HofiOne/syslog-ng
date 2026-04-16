@@ -114,6 +114,9 @@ _translate_number_literals(CfgLexer *lexer, gint compare_mode, LogTemplate *expr
 %token KW_IN_LIST
 %token KW_BLANK
 
+/* %destructor directives specify code to free semantic values that are discarded during error recovery. They do not run when semantic values are used (i.e., on successful parse). */
+%destructor { log_template_unref($$); } template_content template_content_list template_name_or_content template_name_or_content_tail
+
 %type	<node> filter_expr
 %type	<node> filter_simple_expr
 %type	<node> filter_plugin
