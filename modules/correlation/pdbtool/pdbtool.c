@@ -386,7 +386,7 @@ pdbtool_pdb_emit(LogMessage *msg, gpointer user_data)
 static gint
 pdbtool_match(int argc, char *argv[])
 {
-  PatternDB *patterndb;
+  PatternDB *patterndb = NULL;
   GArray *dbg_list = NULL;
   RDebugInfo *dbg_info;
   gint i = 0, pos = 0;
@@ -407,6 +407,7 @@ pdbtool_match(int argc, char *argv[])
   gpointer args[4];
 
   memset(&parse_options, 0, sizeof(parse_options));
+  memset(&proto_options, 0, sizeof(proto_options));
 
   if (!match_message && !match_file)
     {
@@ -425,7 +426,7 @@ pdbtool_match(int argc, char *argv[])
           fprintf(stderr, "Error compiling template: %s, error: %s\n", template->template_str, error->message);
           g_clear_error(&error);
           g_free(t);
-          return 1;
+          goto error;
         }
       g_free(t);
 
@@ -434,23 +435,20 @@ pdbtool_match(int argc, char *argv[])
 
   if (filter_string)
     {
-      CfgLexer *lexer;
-
-      lexer = cfg_lexer_new_buffer(configuration, filter_string, strlen(filter_string));
+      CfgLexer *lexer = cfg_lexer_new_buffer(configuration, filter_string, strlen(filter_string));
       if (!cfg_run_parser_with_main_context(configuration, lexer, &filter_expr_parser, (gpointer *) &filter, NULL,
                                             "pdbtool filter expression"))
         {
           fprintf(stderr, "Error parsing filter expression\n");
-          return 1;
+          goto error;
         }
 
       if (!filter_expr_init(filter, configuration))
         {
           fprintf(stderr, "Error initializing filter expression\n");
-          return 1;
+          goto error;
         }
     }
-
 
   msg_format_options_defaults(&parse_options);
   /* the syslog protocol parser automatically falls back to RFC3164 format */
@@ -623,15 +621,21 @@ pdbtool_match(int argc, char *argv[])
     }
   pattern_db_expire_state(patterndb);
 error:
+  if (filter)
+    filter_expr_unref(filter);
+  if (dbg_list)
+    g_array_free(dbg_list, TRUE);
   if (proto)
     log_proto_server_free(proto);
   if (template)
     log_template_unref(template);
   if (output)
     g_string_free(output, TRUE);
-  pattern_db_free(patterndb);
+  if (patterndb)
+    pattern_db_free(patterndb);
   if (msg)
     log_msg_unref(msg);
+  log_proto_server_options_destroy(&proto_options);
   msg_format_options_destroy(&parse_options);
 
   return ret;
