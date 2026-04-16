@@ -72,7 +72,14 @@ control_client_connect(ControlClient *self)
       close(self->control_fd);
       goto error;
     }
+
   self->control_socket = fdopen(self->control_fd, "r+");
+  if (self->control_socket == NULL)
+    {
+      fprintf(stderr, "Error opening control socket stream, socket='%s', error='%s'\n", self->path, strerror(errno));
+      close(self->control_fd);
+    }
+
 error:
   g_sockaddr_unref(saddr);
   return !!self->control_socket;
@@ -129,7 +136,8 @@ control_client_read_reply(ControlClient *self, CommandResponseHandlerFunc respon
       if (!line)
         {
           fprintf(stderr, "Error reading or EOF occured on socket, error='%s'\n", strerror(errno));
-          return 1;
+          retval = 1;
+          goto exit;
         }
 
       if (strcmp(line, ".\n") == 0)
@@ -139,7 +147,7 @@ control_client_read_reply(ControlClient *self, CommandResponseHandlerFunc respon
       if (retval == 0)
         retval = response_handler(chunk, user_data);
     }
-
+exit:
   g_string_free(chunk, TRUE);
   return retval;
 }
