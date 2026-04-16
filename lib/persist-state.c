@@ -545,22 +545,22 @@ _load_v23(PersistState *self, gint version, SerializeArchive *sa)
 static gboolean
 _load_v4(PersistState *self, gboolean load_all_entries)
 {
-  gint fd;
-  gint64 file_size;
-  gpointer map;
-  gpointer key_block;
-  guint32 key_size;
-  PersistFileHeader *header;
-  gint key_count, i;
-
-  fd = open(self->committed_filename, O_RDONLY);
+  gint fd = open(self->committed_filename, O_RDONLY);
   if (fd < 0)
     {
       /* no previous data found */
       return TRUE;
     }
 
-  file_size = lseek(fd, 0, SEEK_END);
+  gint64 file_size = lseek(fd, 0, SEEK_END);
+  if (file_size < 0)
+    {
+      msg_error("Error seeking in persistent file",
+                evt_tag_str("filename", self->committed_filename),
+                evt_tag_error("error"));
+      close(fd);
+      return FALSE;
+    }
   if (file_size > ((1LL << 31) - 1))
     {
       msg_error("Persistent file too large",
@@ -569,7 +569,16 @@ _load_v4(PersistState *self, gboolean load_all_entries)
       close(fd);
       return FALSE;
     }
-  map = mmap(NULL, file_size, PROT_READ, MAP_SHARED, fd, 0);
+  if (file_size < offsetof(PersistFileHeader, initial_key_store))
+    {
+      msg_error("Persistent file too small to be valid",
+                evt_tag_str("filename", self->committed_filename),
+                evt_tag_printf("size", "%" G_GINT64_FORMAT, file_size));
+      close(fd);
+      return FALSE;
+    }
+
+  gpointer map = mmap(NULL, file_size, PROT_READ, MAP_SHARED, fd, 0);
   close(fd);
   if (map == MAP_FAILED)
     {
@@ -578,25 +587,25 @@ _load_v4(PersistState *self, gboolean load_all_entries)
                 evt_tag_error("error"));
       return FALSE;
     }
-  header = (PersistFileHeader *) map;
 
-  key_block = ((gchar *) map) + offsetof(PersistFileHeader, initial_key_store);
-  key_size = sizeof((((PersistFileHeader *) NULL))->initial_key_store);
+  PersistFileHeader *header = (PersistFileHeader *) map;
 
-  key_count = GUINT32_FROM_BE(header->key_count);
-  i = 0;
+  gpointer key_block = ((gchar *) map) + offsetof(PersistFileHeader, initial_key_store);
+  guint32 key_size = sizeof((((PersistFileHeader *) NULL))->initial_key_store);
+  gint key_count = GUINT32_FROM_BE(header->key_count);
+  gint i = 0;
+  SerializeArchive *sa = NULL;
   while (i < key_count)
     {
       gchar *name;
       guint32 entry_ofs, chain_ofs;
-      SerializeArchive *sa;
 
       sa = serialize_buffer_archive_new(key_block, key_size);
+
       while (i < key_count)
         {
           if (!serialize_read_cstring(sa, &name, NULL))
             {
-              serialize_archive_free(sa);
               msg_error("Persistent file format error, unable to fetch key name");
               goto free_and_exit;
             }
@@ -604,26 +613,29 @@ _load_v4(PersistState *self, gboolean load_all_entries)
             {
               if (serialize_read_uint32(sa, &entry_ofs))
                 {
-                  PersistValueHeader *value_header;
-                  i++;
+                  ++i;
 
                   if (entry_ofs < sizeof(PersistFileHeader) || entry_ofs > file_size)
                     {
-                      serialize_archive_free(sa);
                       g_free(name);
                       msg_error("Persistent file format error, entry offset is out of bounds");
                       goto free_and_exit;
                     }
 
-                  value_header = (PersistValueHeader *) ((gchar *) map + entry_ofs - sizeof(PersistValueHeader));
+                  PersistValueHeader *value_header = (PersistValueHeader *) ((gchar *) map + entry_ofs - sizeof(PersistValueHeader));
                   if ((value_header->in_use) || load_all_entries)
                     {
-                      gpointer new_block;
-                      PersistEntryHandle new_handle;
+                      guint32 value_size = GUINT32_FROM_BE(value_header->size);
+                      if (value_size > file_size || entry_ofs > file_size - value_size)
+                        {
+                          g_free(name);
+                          msg_error("Persistent file format error, value size extends beyond file");
+                          goto free_and_exit;
+                        }
 
-                      new_handle = _alloc_value(self, GUINT32_FROM_BE(value_header->size), FALSE, value_header->version);
-                      new_block = persist_state_map_entry(self, new_handle);
-                      memcpy(new_block, value_header + 1, GUINT32_FROM_BE(value_header->size));
+                      PersistEntryHandle new_handle = _alloc_value(self, value_size, FALSE, value_header->version);
+                      gpointer new_block = persist_state_map_entry(self, new_handle);
+                      memcpy(new_block, value_header + 1, value_size);
                       persist_state_unmap_entry(self, new_handle);
                       /* add key to the current file */
                       _add_key(self, name, new_handle);
@@ -633,7 +645,6 @@ _load_v4(PersistState *self, gboolean load_all_entries)
               else
                 {
                   /* bad format */
-                  serialize_archive_free(sa);
                   g_free(name);
                   msg_error("Persistent file format error, unable to fetch key name");
                   goto free_and_exit;
@@ -645,37 +656,37 @@ _load_v4(PersistState *self, gboolean load_all_entries)
               if (serialize_read_uint32(sa, &chain_ofs))
                 {
                   /* end of block, chain to the next one */
-                  if (chain_ofs == 0 || chain_ofs > file_size)
+                  if (chain_ofs < sizeof(PersistValueHeader) || chain_ofs > file_size)
                     {
-                      msg_error("Persistent file format error, key block chain offset is too large or zero",
+                      msg_error("Persistent file format error, key block chain offset is too large, zero or less than header size",
                                 evt_tag_printf("key_block", "%08lx", (gulong) ((gchar *) key_block - (gchar *) map)),
                                 evt_tag_printf("key_size", "%d", key_size),
                                 evt_tag_int("ofs", chain_ofs));
-                      serialize_archive_free(sa);
                       goto free_and_exit;
                     }
                   key_block = ((gchar *) map) + chain_ofs;
                   key_size = GUINT32_FROM_BE(*(guint32 *) (((gchar *) key_block) - sizeof(PersistValueHeader)));
-                  if (chain_ofs + key_size > file_size)
+                  if (key_size > file_size || chain_ofs > file_size - key_size)
                     {
                       msg_error("Persistent file format error, key block size is too large",
                                 evt_tag_int("key_size", key_size));
-                      serialize_archive_free(sa);
                       goto free_and_exit;
                     }
                   break;
                 }
               else
                 {
-                  serialize_archive_free(sa);
                   msg_error("Persistent file format error, unable to fetch chained key block offset");
                   goto free_and_exit;
                 }
             }
         }
       serialize_archive_free(sa);
+      sa = NULL;
     }
 free_and_exit:
+  if (sa)
+    serialize_archive_free(sa);
   munmap(map, file_size);
   return TRUE;
 }
