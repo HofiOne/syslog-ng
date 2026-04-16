@@ -98,12 +98,13 @@ parse_value_string(gchar *value_str, gchar *buffer, gint buffer_length)
       if (value > 0xFF)
         {
           fprintf(stderr, "invalid numeric value (%s)\n", token);
-          return -1;
+          count = -1;
+          goto exit;
         }
 
       buffer[count++] = (gchar)value;
     }
-
+exit:
   g_strfreev(token_list);
   return count;
 }
